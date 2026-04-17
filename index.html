@@ -12,7 +12,6 @@
         body { background-color: #78a2b9; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; justify-content: center; }
         #app { width: 100%; max-width: 480px; min-height: 100vh; padding: 20px; position: relative; }
 
-        /* 헤더 & 탭 */
         header { text-align: center; margin-bottom: 30px; }
         h1 { font-size: 28px; color: #17354d; letter-spacing: 2px; }
         .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-top: 30px; margin-bottom: 10px; }
@@ -20,23 +19,21 @@
         .tab-btn.active { background-color: #fffac1; }
         .music-btn.playing { background-color: #e46b22; color: #fffac1; }
 
-        /* BUBBLE */
         #bubble-editor { background-color: #fffac1; border: 1px solid #17354d; padding: 15px; margin-bottom: 20px; }
         #bubble-text { width: 100%; background: transparent; border: none; resize: none; font-family: sans-serif; font-size: 14px; outline: none; min-height: 100px; color: #17354d; }
-        .post-item { border-bottom: 1px solid #17354d; padding: 15px 0; color: #17354d; position: relative; }
-        .bubble-actions { position: absolute; top: 15px; right: 0; display: flex; gap: 8px; font-size: 7px; color: #fffac1; cursor: pointer; }
+        
+        /* EDIT DEL 버튼을 위로 올리는 설정 */
+        .post-item { border-bottom: 1px solid #17354d; padding: 15px 0; color: #17354d; display: flex; flex-direction: column; }
+        .bubble-actions { align-self: flex-end; display: flex; gap: 8px; font-size: 7px; color: #fffac1; cursor: pointer; margin-bottom: 5px; }
 
-        /* DIARY 목록 */
         .diary-card { background-color: #3b74a7; border: 2px solid #17354d; margin-bottom: 25px; padding: 15px; cursor: pointer; position: relative; overflow: hidden; }
         .diary-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border: 1px solid #17354d; background-color: #5a8fb1; margin-bottom: 12px; display: block; }
         .diary-card-title { color: #fffac1; font-family: sans-serif; font-weight: bold; font-size: 15px; margin-bottom: 2px; }
         .diary-card-date { color: #fffac1; font-size: 8px; font-family: 'Press Start 2P'; opacity: 0.8; letter-spacing: -0.5px; }
 
-        /* 게임보이 버튼 */
         .gb-buttons { position: absolute; right: 15px; bottom: 15px; display: flex; gap: 8px; transform: rotate(-30deg); }
         .gb-btn { width: 22px; height: 22px; background-color: #17354d; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-family: 'Press Start 2P'; font-size: 10px; color: #5a8fb1; }
 
-        /* DIARY 상세 및 에디터 */
         #diary-detail-view { display: none; color: #17354d; min-height: 500px; padding-bottom: 50px; }
         .detail-header-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #17354d; padding-bottom: 10px; margin-bottom: 25px; }
         .detail-title { font-size: 20px; font-family: sans-serif; font-weight: bold; margin-bottom: 5px; color: #17354d; }
@@ -57,27 +54,13 @@
         .editor-controls { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
         .btn-pixel { background-color: #1a2a3a; color: #fffac1; border: 1px solid #000; padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; font-family: 'Press Start 2P'; }
         
-        /* 이미지 모달 */
         #imgModal { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; cursor: zoom-out; }
         #imgModal img { max-width: 95%; max-height: 95%; object-fit: contain; }
 
         #youtube-player { display: none; }
-
-        .backup-wrapper {
-    text-align: center; /* 가운데 정렬 */
-    width: 100%;
-}
-
-.backup-text {
-    font-family: 'DungGeunMo', cursive; /* 기존 폰트와 통일 (없으면 기본폰트) */
-    font-size: 10px;                    /* 원하셨던 아주 작은 크기 */
-    color: #1a2a3a;                    /* 글자색 (기존 테마색) */
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.backup-text:hover {
-    color: #ffffff;                    /* 살짝 밝아짐 */
-}
+        .backup-wrapper { text-align: center; width: 100%; }
+        .backup-text { font-size: 10px; color: #1a2a3a; cursor: pointer; transition: all 0.3s; }
+        .backup-text:hover { color: #ffffff; }
     </style>
 </head>
 <body>
@@ -90,8 +73,7 @@
             <button id="tabDiary" class="tab-btn" onclick="switchTab('DIARY')">DIARY</button>
             <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
         </div>
-        <div class="backup-wrapper"><span class="backup-text" onclick="backupToMarkdown()">✏️리포트를 작성하시겠습니까?</span>
-</div>
+        <div class="backup-wrapper"><span class="backup-text" onclick="backupToMarkdown()">✏️리포트를 작성하시겠습니까?</span></div>
     </header>
 
     <div id="youtube-player"></div>
@@ -154,46 +136,46 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-  const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyBHMSPEsozQp2ZcanrRWy0-ZE7aoxviDgE",
     authDomain: "nalleum.firebaseapp.com",
     projectId: "nalleum",
     storageBucket: "nalleum.firebasestorage.app",
     messagingSenderId: "889977175883",
     appId: "1:889977175883:web:553b25bd73cb0d758332ce"
-  };
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app); 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app); 
 
-  // 외부(일반 script 태그)에서 쓸 수 있도록 window 객체에 할당
-    window.db = db;
-    window.storage = storage;
-    window.fbActions = { 
-    ref, 
-    uploadBytes, 
-    getDownloadURL, 
-    addDoc, 
-    collection, 
-    getDocs, 
-    query, 
-    orderBy,
-    doc,           // 문서 참조용
-    deleteDoc,     // Firestore 텍스트 삭제용
-    deleteObject   // Storage 이미지 삭제용
-  };
+window.db = db;
+window.storage = storage;
+window.fbActions = { 
+    ref, uploadBytes, getDownloadURL, addDoc, collection, 
+    getDocs, query, orderBy, doc, deleteDoc, updateDoc, onSnapshot, deleteObject
+};
+
+// [수정] 실시간 데이터 감시 시작
+const qBubble = query(collection(db, "BUBBLE"), orderBy("createdAt", "desc"));
+onSnapshot(qBubble, (snapshot) => {
+    window.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (typeof renderBubble === 'function') renderBubble();
+});
+
+const qDiary = query(collection(db, "DIARY"), orderBy("createdAt", "desc"));
+onSnapshot(qDiary, (snapshot) => {
+    window.diaryPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (typeof renderDiary === 'function') renderDiary();
+});
 </script>
 
 <script>
-    let posts = JSON.parse(localStorage.getItem('nalleum_posts')) || [];
-    let diaryPosts = JSON.parse(localStorage.getItem('nalleum_diary')) || [];
-    let tempImages = []; // 미리보기용 base64
-    let tempFiles = [];  // 서버 업로드용 실제 File 객체
+    let tempImages = []; 
+    let tempFiles = [];  
     let editDiaryId = null;
-    let editBubbleIndex = null;
+    let editBubbleId = null;
     let player, isPlaying = false;
-
     const DEFAULT_IMAGES = ["default1.png", "default2.png"];
 
     function switchTab(tab) {
@@ -204,19 +186,19 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "http
         document.getElementById('diary-container').style.display = isBubble ? 'none' : 'block';
         document.getElementById('diary-full-editor').style.display = 'none';
         document.getElementById('diary-detail-view').style.display = 'none';
-        isBubble ? renderBubble() : renderDiary();
     }
 
     function renderDiary() {
         const listContainer = document.getElementById('diary-list');
-        if (!diaryPosts || diaryPosts.length === 0) {
+        const posts = window.diaryPosts || [];
+        if (posts.length === 0) {
             listContainer.innerHTML = '<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">NO ADVENTURES YET.</div>';
             return;
         }
-        listContainer.innerHTML = diaryPosts.map(p => {
+        listContainer.innerHTML = posts.map(p => {
             let thumbSrc = (p.images && p.images.length > 0) ? p.images[0] : DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
             return `
-                <div class="diary-card" onclick="openDiaryDetail(${p.id})">
+                <div class="diary-card" onclick="openDiaryDetail('${p.id}')">
                     <img class="diary-thumb" src="${thumbSrc}">
                     <div class="diary-card-info">
                         <div class="diary-card-title">${p.title}</div>
@@ -231,25 +213,25 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "http
     }
 
     function openDiaryDetail(id) {
-        const post = diaryPosts.find(p => p.id === id);
+        const post = window.diaryPosts.find(p => p.id === id);
         if(!post) return;
         document.getElementById('diary-container').style.display = 'none';
         document.getElementById('diary-detail-view').style.display = 'block';
         document.getElementById('detailTitle').innerText = post.title;
         document.getElementById('detailDate').innerText = post.date;
         document.getElementById('detailContent').innerHTML = post.content.replace(/\n/g, '<br>');
-        document.getElementById('detailImages').innerHTML = post.images.map(img => `<img src="${img}" onclick="showModal('${img}')">`).join('');
+        document.getElementById('detailImages').innerHTML = (post.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')">`).join('');
         document.getElementById('detailEditBtn').onclick = () => startEditDiary(post.id);
-        document.getElementById('detailDelBtn').onclick = () => deleteDiary(post.id);
+        document.getElementById('detailDelBtn').onclick = () => deletePost('DIARY', post.id, post.images);
         window.scrollTo(0, 0);
     }
 
     function handleImg(input, type) {
         Array.from(input.files).forEach(file => {
-            tempFiles.push(file); // 실제 파일 저장
+            tempFiles.push(file);
             const reader = new FileReader();
             reader.onload = (e) => {
-                tempImages.push(e.target.result); // 미리보기 저장
+                tempImages.push(e.target.result);
                 updatePreview(type === 'BUBBLE' ? 'bubble-previews' : 'diary-previews');
             };
             reader.readAsDataURL(file);
@@ -272,246 +254,126 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "http
         updatePreview(id);
     }
 
-    // 서버 업로드 함수
-    async function uploadToFirebase(type, title, content, date) {
-        const imageUrls = [];
-        try {
-            // 1. Storage 이미지 업로드
-            for (const file of tempFiles) {
-                const storageRef = window.fbRef(window.storage, `images/${Date.now()}_${file.name}`);
-                await window.fbUploadBytes(storageRef, file);
-                const url = await window.fbGetDownloadURL(storageRef);
-                imageUrls.push(url);
-            }
-            // 2. Firestore 데이터 저장
-            await window.fbAddDoc(window.fbCollection(window.db, type), {
-                title: title || "",
-                content: content,
-                date: date,
-                images: imageUrls,
-                createdAt: Date.now()
-            });
-            return imageUrls;
-        } catch (error) {
-            console.error("Firebase 저장 오류:", error);
-            return null;
-        }
-    }
-
     async function savePost(type) {
         const btn = type === 'BUBBLE' ? document.getElementById('bubbleSendBtn') : document.getElementById('diarySendBtn');
-        const originalText = btn.innerText;
         btn.innerText = "SAVING...";
         btn.disabled = true;
 
         const date = `[${new Date().toISOString().slice(0,10).replace(/-/g,'.')}]`;
+        const { ref, uploadBytes, getDownloadURL, addDoc, collection, updateDoc, doc } = window.fbActions;
         
-        if (type === 'BUBBLE') {
-            const content = document.getElementById('bubble-text').value;
-            // 로컬 & 서버 동시 저장
-            const uploadedUrls = await uploadToFirebase("BUBBLE", "", content, date);
-            const finalImages = uploadedUrls || [...tempImages]; // 실패 시 로컬 미리보기라도 저장
-
-            if (editBubbleIndex !== null) {
-                posts[editBubbleIndex] = { ...posts[editBubbleIndex], content, images: finalImages };
-                editBubbleIndex = null;
-            } else {
-                posts.unshift({ content, images: finalImages, date });
+        try {
+            const imageUrls = [];
+            for (const file of tempFiles) {
+                const storageRef = ref(window.storage, `images/${Date.now()}_${file.name}`);
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+                imageUrls.push(url);
             }
-            localStorage.setItem('nalleum_posts', JSON.stringify(posts));
-            document.getElementById('bubble-text').value = '';
-            tempImages = []; tempFiles = []; updatePreview('bubble-previews'); renderBubble();
-        } else {
-            const title = document.getElementById('diaryTitleInput').value || "NO TITLE";
-            const content = document.getElementById('diaryContentInput').value;
-            const uploadedUrls = await uploadToFirebase("DIARY", title, content, date);
-            const finalImages = uploadedUrls || [...tempImages];
 
-            if (editDiaryId) {
-                const idx = diaryPosts.findIndex(p => p.id === editDiaryId);
-                diaryPosts[idx] = { ...diaryPosts[idx], title, content, images: finalImages };
-                editDiaryId = null;
+            if (type === 'BUBBLE') {
+                const content = document.getElementById('bubble-text').value;
+                if (editBubbleId) {
+                    await updateDoc(doc(window.db, "BUBBLE", editBubbleId), { content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
+                    editBubbleId = null;
+                } else {
+                    await addDoc(collection(window.db, "BUBBLE"), { content, images: imageUrls, date, createdAt: Date.now() });
+                }
+                document.getElementById('bubble-text').value = '';
             } else {
-                diaryPosts.unshift({ id: Date.now(), title, content, images: finalImages, date });
+                const title = document.getElementById('diaryTitleInput').value || "NO TITLE";
+                const content = document.getElementById('diaryContentInput').value;
+                if (editDiaryId) {
+                    await updateDoc(doc(window.db, "DIARY", editDiaryId), { title, content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
+                    editDiaryId = null;
+                } else {
+                    await addDoc(collection(window.db, "DIARY"), { title, content, images: imageUrls, date, createdAt: Date.now() });
+                }
+                closeDiaryEditor();
             }
-            localStorage.setItem('nalleum_diary', JSON.stringify(diaryPosts));
-            resetDiaryInput(); closeDiaryEditor(); renderDiary();
-        }
-        
-        btn.innerText = originalText;
+            tempImages = []; tempFiles = []; updatePreview(type === 'BUBBLE' ? 'bubble-previews' : 'diary-previews');
+        } catch (e) { console.error(e); alert("저장 실패!"); }
+
+        btn.innerText = "SEND";
         btn.disabled = false;
     }
 
     function renderBubble() {
-        document.getElementById('bubble-list').innerHTML = posts.map((p, i) => `
+        const posts = window.posts || [];
+        document.getElementById('bubble-list').innerHTML = posts.map((p) => `
             <div class="post-item">
                 <div class="bubble-actions">
-                    <span onclick="startEditBubble(${i})">EDIT</span>
-                    <span onclick="deleteBubble(${i})">DEL</span>
+                    <span onclick="startEditBubble('${p.id}')">EDIT</span>
+                    <span onclick="deletePost('BUBBLE', '${p.id}', ${JSON.stringify(p.images)})">DEL</span>
                 </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:60px;">${p.content} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${p.content} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
-                    ${p.images.map(img => `<img src="${img}" onclick="showModal('${img}')" style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`).join('')}
+                    ${(p.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')" style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`).join('')}
                 </div>
             </div>
         `).join('');
     }
 
-    function showModal(src) {
-        document.getElementById('modalImg').src = src;
-        document.getElementById('imgModal').style.display = 'flex';
+    async function deletePost(type, id, images) {
+        if(!confirm("✂️정말 삭제하시겠습니까?")) return;
+        const { doc, deleteDoc, ref, deleteObject } = window.fbActions;
+        try {
+            await deleteDoc(doc(window.db, type, id));
+            if (images) {
+                for (const url of images) {
+                    const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+                    await deleteObject(ref(window.storage, imgPath));
+                }
+            }
+            if(type === 'DIARY') closeDiaryDetail();
+        } catch (e) { console.error(e); }
     }
 
-    function startEditBubble(index) {
-        const p = posts[index];
+    function startEditBubble(id) {
+        const p = window.posts.find(x => x.id === id);
         document.getElementById('bubble-text').value = p.content;
-        tempImages = [...p.images];
+        tempImages = [...(p.images || [])];
         updatePreview('bubble-previews');
-        editBubbleIndex = index;
+        editBubbleId = id;
         document.getElementById('bubbleSendBtn').innerText = 'EDIT';
         window.scrollTo(0, 0);
     }
 
-    function deleteBubble(index) {
-        if(confirm("삭제하시겠습니까?")) {
-            posts.splice(index, 1);
-            localStorage.setItem('nalleum_posts', JSON.stringify(posts));
-            renderBubble();
-        }
-    }
-
     function startEditDiary(id) {
-        const post = diaryPosts.find(p => p.id === id);
+        const p = window.diaryPosts.find(x => x.id === id);
         openDiaryEditor();
-        document.getElementById('diaryTitleInput').value = post.title;
-        document.getElementById('diaryContentInput').value = post.content;
-        tempImages = [...post.images];
+        document.getElementById('diaryTitleInput').value = p.title;
+        document.getElementById('diaryContentInput').value = p.content;
+        tempImages = [...(p.images || [])];
         updatePreview('diary-previews');
         editDiaryId = id;
         document.getElementById('diarySendBtn').innerText = 'EDIT';
     }
 
-    function deleteDiary(id) {
-        if(confirm("✂️정말 삭제하시겠습니까?")) {
-            diaryPosts = diaryPosts.filter(p => p.id !== id);
-            localStorage.setItem('nalleum_diary', JSON.stringify(diaryPosts));
-            closeDiaryDetail(); renderDiary();
-        }
-    }
-
-    function resetDiaryInput() { document.getElementById('diaryTitleInput').value = ''; document.getElementById('diaryContentInput').value = ''; tempImages = []; tempFiles = []; updatePreview('diary-previews'); }
+    function showModal(src) { document.getElementById('modalImg').src = src; document.getElementById('imgModal').style.display = 'flex'; }
     function closeDiaryDetail() { document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
-    function openDiaryEditor() { document.getElementById('diary-container').style.display = 'none'; document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-full-editor').style.display = 'block'; if (!editDiaryId) resetDiaryInput(); }
-    function closeDiaryEditor() { document.getElementById('diary-full-editor').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; editDiaryId = null; }
+    function openDiaryEditor() { document.getElementById('diary-container').style.display = 'none'; document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-full-editor').style.display = 'block'; editDiaryId = null; tempImages = []; tempFiles = []; updatePreview('diary-previews'); }
+    function closeDiaryEditor() { document.getElementById('diary-full-editor').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
     
-
-var tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
-var firstScriptTag = document.getElementsByTagName('script')[0];
-firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'ZeAsP7JdHqU', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'ZeAsP7JdHqU' } });
-    }
-    function toggleMusic() {
-        const btn = document.getElementById('playBtn');
-        if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); }
-        else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); }
-        isPlaying = !isPlaying;
-    }
-    window.onload = () => { renderBubble(); renderDiary(); };
-
-    // 백업 함수를 여기에 추가!
+    // YouTube & Backup functions remain same...
+    var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'ZeAsP7JdHqU', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'ZeAsP7JdHqU' } }); }
+    function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
+    
     async function backupToMarkdown() {
-    // 버튼 상태 제어를 위해 id가 'backupBtn'인 버튼을 찾습니다.
-    const btn = document.getElementById('backupBtn');
-    const originalText = btn ? btn.innerText : "BACKUP";
-    
-    try {
-        if (btn) {
-            btn.innerText = "SAVING...";
-            btn.disabled = true;
-        }
-
-        // 1. 도구 가져오기
         const { getDocs, collection, query, orderBy } = window.fbActions;
-        
-        // 2. BUBBLE 데이터를 최신순으로 가져오기
         const q = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-            alert("⚠️백업할 데이터가 없습니다!");
-            return;
-        }
-        
-        let mdContent = "# NALLEUM BUBBLE BACKUP\n\n";
-        
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            mdContent += `## ${data.date || '날짜없음'}\n\n`;
-            mdContent += `${data.content}\n\n`;
-            
-            if (data.images && data.images.length > 0) {
-                data.images.forEach(img => {
-                    mdContent += `![image](${img})\n`;
-                });
-            }
-            mdContent += "\n---\n\n";
+        const snap = await getDocs(q);
+        if (snap.empty) return alert("데이터 없음");
+        let md = "# BUBBLE BACKUP\n\n";
+        snap.forEach(d => {
+            const data = d.data();
+            md += `## ${data.date}\n${data.content}\n${(data.images || []).map(img => `![img](${img})`).join('\n')}\n---\n\n`;
         });
-
-        // 3. 파일 다운로드 실행
-        const blob = new Blob([mdContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nalleum_backup_${new Date().toISOString().split('T')[0]}.md`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        alert("✅백업이 완료되었습니다!");
-
-    } catch (error) {
-        console.error("백업 오류:", error);
-        alert("⚠️백업 중 오류가 발생했습니다. 콘솔을 확인해주세요.");
-    } finally {
-        if (btn) {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+        const blob = new Blob([md], { type: 'text/markdown' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup.md`; a.click();
     }
-}
-
-async function deleteBubble(index) {
-    if (!confirm("✂️정말 삭제하시겠습니까?")) return;
-
-    const post = posts[index]; // 삭제할 데이터 가져오기
-    const { doc, deleteDoc, deleteObject, ref } = window.fbActions;
-
-    try {
-        // 1. 스토리지 이미지 삭제 (반복문으로 모든 사진 삭제)
-        if (post.images && post.images.length > 0) {
-            for (const url of post.images) {
-                // URL에서 파일 경로만 추출하는 로직
-                const imagePath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
-                const storageRef = ref(window.storage, imagePath);
-                await deleteObject(storageRef);
-            }
-        }
-
-        // 2. 파이어스토어 텍스트 삭제 (필요 시 추가)
-        // await deleteDoc(doc(window.db, "BUBBLE", post.id)); 
-
-        // 3. 로컬 화면 갱신
-        posts.splice(index, 1);
-        localStorage.setItem('nalleum_posts', JSON.stringify(posts));
-        renderBubble();
-    } catch (error) {
-        console.error("⚠️ERROR⚠️:", error);
-    }
-}
 </script>
 </body>
 </html>
