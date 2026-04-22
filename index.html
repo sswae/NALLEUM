@@ -425,21 +425,37 @@ loadDiary();
     function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'px7dYqZPk6I', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'px7dYqZPk6I' } }); }
     function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
     
-    async function backupToMarkdown() {
-        const { getDocs, collection } = window.fbActions;
-        const types = ['BUBBLE', 'NEG'];
-        let md = "# BACKUP\n\n";
-        for(const type of types) {
-            const snap = await getDocs(collection(window.db, type));
-            md += `## ${type}\n`;
-            snap.forEach(d => {
-                const data = d.data();
-                md += `### ${data.date}\n${data.content}\n${(data.images || []).map(img => `![img](${img})`).join('\n')}\n---\n`;
-            });
-        }
-        const blob = new Blob([md], { type: 'text/markdown' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup.md`; a.click();
+async function backupToMarkdown() {
+    const { getDocs, collection } = window.fbActions;
+    // BUBBLE과 DIARY를 백업하도록 설정
+    const types = ['BUBBLE', 'DIARY']; 
+    let md = "# BACKUP\n\n";
+
+    for(const type of types) {
+        const snap = await getDocs(collection(window.db, type));
+        md += `## [${type}]\n\n`;
+        
+        snap.forEach(d => {
+            const data = d.data();
+            // 제목이 있는 경우(DIARY)와 없는 경우(BUBBLE)를 구분해서 출력
+            if (data.title) {
+                md += `### ${data.title}\n`;
+            }
+            md += `**날짜:** ${data.date}\n\n${data.content}\n\n`;
+            
+            if (data.images && data.images.length > 0) {
+                md += `${data.images.map(img => `![img](${img})`).join('\n')}\n`;
+            }
+            md += `\n---\n\n`;
+        });
     }
+    
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a'); 
+    a.href = URL.createObjectURL(blob); 
+    a.download = `backup_${new Date().toISOString().slice(0,10)}.md`; 
+    a.click();
+}
 </script>
 </body>
 </html>
