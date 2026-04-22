@@ -19,13 +19,12 @@
         .tab-btn.active { background-color: #fffac1; }
         .music-btn.playing { background-color: #e46b22; color: #fffac1; }
 
-        #bubble-editor { background-color: #fffac1; border: 1px solid #17354d; padding: 15px; margin-bottom: 20px; }
-        #bubble-text { width: 100%; background: transparent; border: none; resize: none; font-family: sans-serif; font-size: 14px; outline: none; min-height: 100px; color: #17354d; }
+        .editor-box { background-color: #fffac1; border: 1px solid #17354d; padding: 15px; margin-bottom: 20px; }
+        .post-input { width: 100%; background: transparent; border: none; resize: none; font-family: sans-serif; font-size: 14px; outline: none; min-height: 100px; color: #17354d; }
         
-        /* EDIT DEL 버튼을 위로 올리는 설정 */
         .post-item { border-bottom: 1px solid #17354d; padding: 15px 0; color: #17354d; display: flex; flex-direction: column; }
         .post-item > div:nth-child(2) { white-space: pre-wrap; word-break: break-all; }
-        .bubble-actions { align-self: flex-end; display: flex; gap: 8px; font-size: 7px; color: #fffac1; cursor: pointer; margin-bottom: 5px; }
+        .post-actions { align-self: flex-end; display: flex; gap: 8px; font-size: 7px; color: #fffac1; cursor: pointer; margin-bottom: 5px; }
 
         .diary-card { background-color: #3b74a7; border: 2px solid #17354d; margin-bottom: 25px; padding: 15px; cursor: pointer; position: relative; overflow: hidden; }
         .diary-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border: 1px solid #17354d; background-color: #5a8fb1; margin-bottom: 12px; display: block; }
@@ -62,6 +61,10 @@
         .backup-wrapper { text-align: center; width: 100%; }
         .backup-text { font-size: 10px; color: #1a2a3a; cursor: pointer; transition: all 0.3s; }
         .backup-text:hover { color: #ffffff; }
+
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; padding-bottom: 20px; }
+        .page-btn { cursor: pointer; color: #fffac1; font-family: 'Press Start 2P'; font-size: 10px; }
+        .page-btn.active { color: #e46b22; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -71,6 +74,7 @@
         <h1>NALLEUM</h1>
         <div class="nav-tabs">
             <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
+            <button id="tabNeg" class="tab-btn" onclick="switchTab('NEG')">NEG</button>
             <button id="tabDiary" class="tab-btn" onclick="switchTab('DIARY')">DIARY</button>
             <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
         </div>
@@ -80,8 +84,8 @@
     <div id="youtube-player"></div>
 
     <div id="bubble-container">
-        <div id="bubble-editor">
-            <textarea id="bubble-text" placeholder="무슨 일이 일어나고 있나요"></textarea>
+        <div class="editor-box">
+            <textarea id="bubble-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
             <div id="bubble-previews" class="preview-container"></div>
             <div class="editor-controls">
                 <input type="file" id="bubbleFile" multiple accept="image/*" onchange="handleImg(this, 'BUBBLE')" style="display:none">
@@ -90,6 +94,21 @@
             </div>
         </div>
         <div id="bubble-list"></div>
+        <div id="bubble-pagination" class="pagination"></div>
+    </div>
+
+    <div id="neg-container" style="display:none">
+        <div class="editor-box">
+            <textarea id="neg-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+            <div id="neg-previews" class="preview-container"></div>
+            <div class="editor-controls">
+                <input type="file" id="negFile" multiple accept="image/*" onchange="handleImg(this, 'NEG')" style="display:none">
+                <button class="btn-pixel" onclick="document.getElementById('negFile').click()">IMG</button>
+                <button id="negSendBtn" class="btn-pixel" onclick="savePost('NEG')">SEND</button>
+            </div>
+        </div>
+        <div id="neg-list"></div>
+        <div id="neg-pagination" class="pagination"></div>
     </div>
 
     <div id="diary-container" style="display:none">
@@ -134,7 +153,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc, getCountFromServer, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 const firebaseConfig = {
@@ -154,39 +173,93 @@ window.db = db;
 window.storage = storage;
 window.fbActions = { 
     ref, uploadBytes, getDownloadURL, addDoc, collection, 
-    getDocs, query, orderBy, doc, deleteDoc, updateDoc, onSnapshot, deleteObject
+    getDocs, query, orderBy, doc, deleteDoc, updateDoc, deleteObject, getCountFromServer, limit
 };
 
-// [수정] 실시간 데이터 감시 시작
-const qBubble = query(collection(db, "BUBBLE"), orderBy("createdAt", "desc"));
-onSnapshot(qBubble, (snapshot) => {
-    window.posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    if (typeof renderBubble === 'function') renderBubble();
-});
+// 페이지 상태 관리
+const postsPerPage = 20;
 
-const qDiary = query(collection(db, "DIARY"), orderBy("createdAt", "desc"));
-onSnapshot(qDiary, (snapshot) => {
+// 게시물 불러오기 함수
+async function loadPosts(type, page = 1) {
+    const { getDocs, collection, query, orderBy, limit, getCountFromServer } = window.fbActions;
+    const coll = collection(window.db, type);
+    
+    // 1. 전체 게시물 수 구하기
+    const snapshot = await getCountFromServer(coll);
+    const totalPosts = snapshot.data().count;
+    const totalPages = Math.ceil(totalPosts / postsPerPage) || 1;
+    
+    // 2. 해당 페이지 데이터만 가져오기
+    const q = query(coll, orderBy("createdAt", "desc"), limit(postsPerPage)); 
+    const querySnapshot = await getDocs(q);
+    
+    window[type.toLowerCase() + 'Posts'] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderBoard(type);
+    renderPagination(type, page, totalPages);
+}
+
+// 페이지 버튼 렌더링
+function renderPagination(type, currentPage, totalPages) {
+    const container = document.getElementById(type.toLowerCase() + '-pagination');
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<span class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadPosts('${type}', ${i})">[${i}]</span>`;
+    }
+    container.innerHTML = html;
+}
+
+// 초기 로딩 시 데이터 호출
+loadPosts('BUBBLE', 1);
+loadPosts('NEG', 1);
+// DIARY는 기존 방식 유지
+async function loadDiary() {
+    const { getDocs, collection, query, orderBy } = window.fbActions;
+    const q = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
     window.diaryPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    if (typeof renderDiary === 'function') renderDiary();
-});
+    renderBoard('DIARY');
+}
+loadDiary();
+
 </script>
 
 <script>
     let tempImages = []; 
     let tempFiles = [];  
     let editDiaryId = null;
-    let editBubbleId = null;
+    let editPostId = null; 
     let player, isPlaying = false;
     const DEFAULT_IMAGES = ["default1.png", "default2.png"];
 
     function switchTab(tab) {
-        const isBubble = (tab === 'BUBBLE');
-        document.getElementById('tabBubble').classList.toggle('active', isBubble);
-        document.getElementById('tabDiary').classList.toggle('active', !isBubble);
-        document.getElementById('bubble-container').style.display = isBubble ? 'block' : 'none';
-        document.getElementById('diary-container').style.display = isBubble ? 'none' : 'block';
+        document.getElementById('tabBubble').classList.toggle('active', tab === 'BUBBLE');
+        document.getElementById('tabNeg').classList.toggle('active', tab === 'NEG');
+        document.getElementById('tabDiary').classList.toggle('active', tab === 'DIARY');
+        
+        document.getElementById('bubble-container').style.display = (tab === 'BUBBLE') ? 'block' : 'none';
+        document.getElementById('neg-container').style.display = (tab === 'NEG') ? 'block' : 'none';
+        document.getElementById('diary-container').style.display = (tab === 'DIARY') ? 'block' : 'none';
+        
         document.getElementById('diary-full-editor').style.display = 'none';
         document.getElementById('diary-detail-view').style.display = 'none';
+    }
+
+    function renderBoard(type) {
+        if(type === 'DIARY') return renderDiary();
+        const listContainer = document.getElementById(type.toLowerCase() + '-list');
+        const posts = window[type.toLowerCase() + 'Posts'] || [];
+        listContainer.innerHTML = posts.map((p) => `
+            <div class="post-item">
+                <div class="post-actions">
+                    <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
+                    <span onclick="deletePost('${type}', '${p.id}', ${JSON.stringify(p.images)})">DEL</span>
+                </div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${p.content} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
+                <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
+                    ${(p.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')" style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`).join('')}
+                </div>
+            </div>
+        `).join('');
     }
 
     function renderDiary() {
@@ -233,7 +306,7 @@ onSnapshot(qDiary, (snapshot) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 tempImages.push(e.target.result);
-                updatePreview(type === 'BUBBLE' ? 'bubble-previews' : 'diary-previews');
+                updatePreview(type.toLowerCase() + '-previews');
             };
             reader.readAsDataURL(file);
         });
@@ -241,6 +314,7 @@ onSnapshot(qDiary, (snapshot) => {
 
     function updatePreview(id) {
         const container = document.getElementById(id);
+        if(!container) return;
         container.innerHTML = tempImages.map((src, i) => `
             <div class="preview-item">
                 <img src="${src}">
@@ -256,7 +330,7 @@ onSnapshot(qDiary, (snapshot) => {
     }
 
     async function savePost(type) {
-        const btn = type === 'BUBBLE' ? document.getElementById('bubbleSendBtn') : document.getElementById('diarySendBtn');
+        const btn = document.getElementById(type.toLowerCase() + 'SendBtn');
         btn.innerText = "SAVING...";
         btn.disabled = true;
 
@@ -272,15 +346,17 @@ onSnapshot(qDiary, (snapshot) => {
                 imageUrls.push(url);
             }
 
-            if (type === 'BUBBLE') {
-                const content = document.getElementById('bubble-text').value;
-                if (editBubbleId) {
-                    await updateDoc(doc(window.db, "BUBBLE", editBubbleId), { content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
-                    editBubbleId = null;
+            if (type === 'BUBBLE' || type === 'NEG') {
+                const inputEl = document.getElementById(type.toLowerCase() + '-text');
+                const content = inputEl.value;
+                if (editPostId) {
+                    await updateDoc(doc(window.db, type, editPostId), { content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
+                    editPostId = null;
                 } else {
-                    await addDoc(collection(window.db, "BUBBLE"), { content, images: imageUrls, date, createdAt: Date.now() });
+                    await addDoc(collection(window.db, type), { content, images: imageUrls, date, createdAt: Date.now() });
                 }
-                document.getElementById('bubble-text').value = '';
+                inputEl.value = '';
+                loadPosts(type, 1);
             } else {
                 const title = document.getElementById('diaryTitleInput').value || "NO TITLE";
                 const content = document.getElementById('diaryContentInput').value;
@@ -291,28 +367,13 @@ onSnapshot(qDiary, (snapshot) => {
                     await addDoc(collection(window.db, "DIARY"), { title, content, images: imageUrls, date, createdAt: Date.now() });
                 }
                 closeDiaryEditor();
+                loadDiary();
             }
-            tempImages = []; tempFiles = []; updatePreview(type === 'BUBBLE' ? 'bubble-previews' : 'diary-previews');
+            tempImages = []; tempFiles = []; updatePreview(type.toLowerCase() + '-previews');
         } catch (e) { console.error(e); alert("저장 실패!"); }
 
         btn.innerText = "SEND";
         btn.disabled = false;
-    }
-
-    function renderBubble() {
-        const posts = window.posts || [];
-        document.getElementById('bubble-list').innerHTML = posts.map((p) => `
-            <div class="post-item">
-                <div class="bubble-actions">
-                    <span onclick="startEditBubble('${p.id}')">EDIT</span>
-                    <span onclick="deletePost('BUBBLE', '${p.id}', ${JSON.stringify(p.images)})">DEL</span>
-                </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${p.content} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
-                <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
-                    ${(p.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')" style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`).join('')}
-                </div>
-            </div>
-        `).join('');
     }
 
     async function deletePost(type, id, images) {
@@ -322,21 +383,24 @@ onSnapshot(qDiary, (snapshot) => {
             await deleteDoc(doc(window.db, type, id));
             if (images) {
                 for (const url of images) {
-                    const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
-                    await deleteObject(ref(window.storage, imgPath));
+                    try {
+                        const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+                        await deleteObject(ref(window.storage, imgPath));
+                    } catch(e) {}
                 }
             }
-            if(type === 'DIARY') closeDiaryDetail();
+            if(type === 'DIARY') { closeDiaryDetail(); loadDiary(); }
+            else loadPosts(type, 1);
         } catch (e) { console.error(e); }
     }
 
-    function startEditBubble(id) {
-        const p = window.posts.find(x => x.id === id);
-        document.getElementById('bubble-text').value = p.content;
+    function startEditPost(type, id) {
+        const p = window[type.toLowerCase() + 'Posts'].find(x => x.id === id);
+        document.getElementById(type.toLowerCase() + '-text').value = p.content;
         tempImages = [...(p.images || [])];
-        updatePreview('bubble-previews');
-        editBubbleId = id;
-        document.getElementById('bubbleSendBtn').innerText = 'EDIT';
+        updatePreview(type.toLowerCase() + '-previews');
+        editPostId = id;
+        document.getElementById(type.toLowerCase() + 'SendBtn').innerText = 'EDIT';
         window.scrollTo(0, 0);
     }
 
@@ -356,22 +420,23 @@ onSnapshot(qDiary, (snapshot) => {
     function openDiaryEditor() { document.getElementById('diary-container').style.display = 'none'; document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-full-editor').style.display = 'block'; editDiaryId = null; tempImages = []; tempFiles = []; updatePreview('diary-previews'); }
     function closeDiaryEditor() { document.getElementById('diary-full-editor').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
     
-    // YouTube & Backup functions remain same...
     var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
     var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'UqA1QsvKwgw', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'UqA1QsvKwgw' } }); }
+    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'px7dYqZPk6I', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'px7dYqZPk6I' } }); }
     function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
     
     async function backupToMarkdown() {
-        const { getDocs, collection, query, orderBy } = window.fbActions;
-        const q = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        if (snap.empty) return alert("데이터 없음");
-        let md = "# BUBBLE BACKUP\n\n";
-        snap.forEach(d => {
-            const data = d.data();
-            md += `## ${data.date}\n${data.content}\n${(data.images || []).map(img => `![img](${img})`).join('\n')}\n---\n\n`;
-        });
+        const { getDocs, collection } = window.fbActions;
+        const types = ['BUBBLE', 'NEG'];
+        let md = "# BACKUP\n\n";
+        for(const type of types) {
+            const snap = await getDocs(collection(window.db, type));
+            md += `## ${type}\n`;
+            snap.forEach(d => {
+                const data = d.data();
+                md += `### ${data.date}\n${data.content}\n${(data.images || []).map(img => `![img](${img})`).join('\n')}\n---\n`;
+            });
+        }
         const blob = new Blob([md], { type: 'text/markdown' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `backup.md`; a.click();
     }
