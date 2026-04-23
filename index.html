@@ -257,24 +257,27 @@ window.loadDiary = loadDiary;
 </script>
 
 <script>
+// 1. 상단에 변수 선언
+const clickSound = new Audio('click.mp3'); 
 
-    // 1. 상단에 변수 선언
-    const clickSound = new Audio('click.mp3'); 
+// 2. 함수 선언 (수정됨)
+function playClickSound() {
+    clickSound.currentTime = 0;
+    // play()는 Promise를 반환하므로 .catch()로 오류 방지
+    clickSound.play().catch(error => {
+        console.log("자동 재생이 차단되었습니다. 페이지를 먼저 클릭하세요.");
+    });
+}
 
-    // 2. 함수 선언
-    function playClickSound() {
-        clickSound.currentTime = 0;
-        clickSound.play();
-    }
-
-    // 3. 페이지가 다 불러와진 후 버튼들에 이벤트 연결
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.btn-pixel').forEach(button => {
-            button.addEventListener('click', () => {
-                playClickSound();
-            });
+// 3. 페이지 로드 후 버튼 이벤트 연결
+document.addEventListener('DOMContentLoaded', () => {
+    // 모든 .btn-pixel 버튼과, 추가로 클릭음이 필요한 버튼들(선택 사항)
+    document.querySelectorAll('.btn-pixel, .music-btn, .tab-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            playClickSound();
         });
     });
+});
     
     let tempImages = []; 
     let tempFiles = [];  
