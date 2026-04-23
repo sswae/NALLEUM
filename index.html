@@ -265,7 +265,7 @@ function renderBoard(type) {
     // 링크 변환 함수
     const linkify = (text) => {
         const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color: #e46b22; text-decoration: underline;">${url}</a>`);
+        return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color: #227be4; text-decoration: underline;">${url}</a>`);
     };
     
     listContainer.innerHTML = posts.map((p) => {
