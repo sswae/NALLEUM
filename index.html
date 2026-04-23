@@ -263,7 +263,7 @@ const clickSound = new Audio('click.mp3');
 // 2. 함수 선언 (수정됨)
 function playClickSound() {
     clickSound.currentTime = 0;
-    clickSound.volume = 0.4;
+    clickSound.volume = 0.3;
     // play()는 Promise를 반환하므로 .catch()로 오류 방지
     clickSound.play().catch(error => {
         console.log("자동 재생이 차단되었습니다. 페이지를 먼저 클릭하세요.");
@@ -504,7 +504,7 @@ function renderBoard(type) {
     
     var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
     var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'dTwj7PhpY9M', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'dTwj7PhpY9M' } }); }
+    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'STugQ0X1NoI', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'STugQ0X1NoI' } }); }
     function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
     
 async function backupToMarkdown() {
