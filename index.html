@@ -263,6 +263,7 @@ const clickSound = new Audio('click.mp3');
 // 2. 함수 선언 (수정됨)
 function playClickSound() {
     clickSound.currentTime = 0;
+    clickSound.volume = 0.6;
     // play()는 Promise를 반환하므로 .catch()로 오류 방지
     clickSound.play().catch(error => {
         console.log("자동 재생이 차단되었습니다. 페이지를 먼저 클릭하세요.");
