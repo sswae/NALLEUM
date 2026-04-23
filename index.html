@@ -6,6 +6,7 @@
     <title>NALLEUM</title>
     <link rel="icon" href="favicon.png" type="favicon/png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
         * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
@@ -449,35 +450,45 @@ function renderBoard(type) {
     function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
     
 async function backupToMarkdown() {
-    const { getDocs, collection } = window.fbActions;
-    // BUBBLE과 DIARY를 백업하도록 설정
-    const types = ['BUBBLE', 'DIARY']; 
-    let md = "# BACKUP\n\n";
-
-    for(const type of types) {
-        const snap = await getDocs(collection(window.db, type));
-        md += `## [${type}]\n\n`;
-        
-        snap.forEach(d => {
-            const data = d.data();
-            // 제목이 있는 경우(DIARY)와 없는 경우(BUBBLE)를 구분해서 출력
-            if (data.title) {
-                md += `### ${data.title}\n`;
-            }
-            md += `**날짜:** ${data.date}\n\n${data.content}\n\n`;
-            
-            if (data.images && data.images.length > 0) {
-                md += `${data.images.map(img => `![img](${img})`).join('\n')}\n`;
-            }
-            md += `\n---\n\n`;
-        });
-    }
+    const { getDocs, collection, query, orderBy } = window.fbActions;
+    const q = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
     
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const a = document.createElement('a'); 
-    a.href = URL.createObjectURL(blob); 
-    a.download = `backup_${new Date().toISOString().slice(0,10)}.md`; 
-    a.click();
+    const zip = new JSZip();
+    const imgFolder = zip.folder("images");
+    let md = "# NALLEUM BUBBLE BACKUP\n\n";
+
+    for (const d of snap.docs) {
+        const data = d.data();
+        md += `## ${data.date}\n${data.content}\n`;
+        
+        if (data.images) {
+            for (let i = 0; i < data.images.length; i++) {
+                const url = data.images[i];
+                const fileName = `img_${d.id}_${i}.png`;
+                
+                // 1. URL에서 이미지 데이터(Blob) 가져오기
+                const response = await fetch(url);
+                const blob = await response.blob();
+                
+                // 2. ZIP의 images 폴더에 넣기
+                imgFolder.file(fileName, blob);
+                
+                // 3. 마크다운 링크를 로컬 경로로 변경
+                md += `![img](images/${fileName})\n`;
+            }
+        }
+        md += "\n---\n\n";
+    }
+
+    // 4. 마크다운 파일 추가 및 ZIP 다운로드
+    zip.file("backup.md", md);
+    zip.generateAsync({ type: "blob" }).then(content => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = `nalleum_backup_${new Date().toISOString().split('T')[0]}.zip`;
+        a.click();
+    });
 }
 </script>
 </body>
