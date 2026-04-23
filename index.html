@@ -441,7 +441,21 @@ function renderBoard(type) {
 
     function showModal(src) { document.getElementById('modalImg').src = src; document.getElementById('imgModal').style.display = 'flex'; }
     function closeDiaryDetail() { document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
-    function openDiaryEditor() { document.getElementById('diary-container').style.display = 'none'; document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-full-editor').style.display = 'block'; editDiaryId = null; tempImages = []; tempFiles = []; updatePreview('diary-previews'); }
+    function openDiaryEditor() { 
+    document.getElementById('diary-container').style.display = 'none'; 
+    document.getElementById('diary-detail-view').style.display = 'none'; 
+    document.getElementById('diary-full-editor').style.display = 'block'; 
+    
+    // 추가된 부분: 수정 모드 해제 및 버튼 텍스트 초기화
+    editDiaryId = null; 
+    document.getElementById('diarySendBtn').innerText = 'SEND'; 
+    document.getElementById('diaryTitleInput').value = ''; // 제목 초기화
+    document.getElementById('diaryContentInput').value = ''; // 내용 초기화
+    
+    tempImages = []; 
+    tempFiles = []; 
+    updatePreview('diary-previews'); 
+}
     function closeDiaryEditor() { document.getElementById('diary-full-editor').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
     
     var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
