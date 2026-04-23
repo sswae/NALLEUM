@@ -257,6 +257,26 @@ window.loadDiary = loadDiary;
 </script>
 
 <script>
+
+    // 1. 상단에 변수 선언
+    const clickSound = new Audio('click.mp3'); 
+
+    // 2. 함수 선언
+    function playClickSound() {
+        clickSound.currentTime = 0;
+        clickSound.volume = 0.3;
+        clickSound.play();
+    }
+
+    // 3. 페이지가 다 불러와진 후 버튼들에 이벤트 연결
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.btn-pixel').forEach(button => {
+            button.addEventListener('click', () => {
+                playClickSound();
+            });
+        });
+    });
+    
     let tempImages = []; 
     let tempFiles = [];  
     let editDiaryId = null;
