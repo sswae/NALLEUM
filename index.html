@@ -490,6 +490,22 @@ async function backupToMarkdown() {
         a.click();
     });
 }
+
+    // BUBBLE, NEG, DIARY 각각에 대해 이벤트 설정
+['bubble-text', 'neg-text', 'diaryContentInput'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('keydown', function(e) {
+            // Ctrl(또는 Mac의 Cmd) + Enter를 누르면
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                // 해당 탭에 맞는 저장 함수 호출
+                if (id === 'bubble-text') savePost('BUBBLE');
+                else if (id === 'neg-text') savePost('NEG');
+                else if (id === 'diaryContentInput') savePost('DIARY');
+            }
+        });
+    }
+});
 </script>
 </body>
 </html>
