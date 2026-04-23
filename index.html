@@ -14,7 +14,7 @@
         #app { width: 100%; max-width: 480px; min-height: 100vh; padding: 20px; position: relative; }
 
         header { text-align: center; margin-bottom: 30px; }
-        h1 { font-size: 28px; color: #17354d; letter-spacing: 2px; }
+        h1 { font-size: 28px; color: #17354d; letter-spacing: 2px; margin-top: 50px; margin-bottom: 60px; }
         .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-top: 30px; margin-bottom: 10px; }
         .tab-btn, .music-btn { background: none; border: 2px solid #17354d; border-radius: 20px; padding: 8px 15px; font-family: inherit; font-size: 11px; cursor: pointer; color: #17354d; }
         .tab-btn.active { background-color: #fffac1; }
@@ -66,21 +66,42 @@
         .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; padding-bottom: 20px; }
         .page-btn { cursor: pointer; color: #fffac1; font-family: 'Press Start 2P'; font-size: 10px; }
         .page-btn.active { color: #e46b22; text-decoration: underline; }
+
+/* 별 회전 애니메이션 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* spinning 클래스가 붙으면 회전 시작 */
+.spinning {
+    animation: spin 3s linear infinite;
+}
+</style>
+</style>
     </style>
 </head>
 <body>
 
 <div id="app">
-    <header>
-        <h1>NALLEUM</h1>
-        <div class="nav-tabs">
-            <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
-            <button id="tabNeg" class="tab-btn" onclick="switchTab('NEG')">NEG</button>
-            <button id="tabDiary" class="tab-btn" onclick="switchTab('DIARY')">DIARY</button>
-            <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
-        </div>
-        <div class="backup-wrapper"><span class="backup-text" onclick="backupToMarkdown()">✏️리포트를 작성하시겠습니까?</span></div>
-    </header>
+<header>    
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 0 10px;">
+    <span class="backup-text" onclick="backupToMarkdown()">✏️REPORT</span>
+    
+    <div style="display:flex; align-items:center; gap:8px;">
+        <div id="star" style="font-size:20px;">⭐️</div> 
+        <button id="playBtn" class="music-btn" onclick="toggleMusic()" style="padding: 5px 10px; font-size: 9px;">PLAY</button>
+    </div>
+</div>
+
+<h1>NALLEUM</h1>
+
+    <div class="nav-tabs">
+        <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
+        <button id="tabNeg" class="tab-btn" onclick="switchTab('NEG')">NEG</button>
+        <button id="tabDiary" class="tab-btn" onclick="switchTab('DIARY')">DIARY</button>
+    </div>
+</header>
 
     <div id="youtube-player"></div>
 
@@ -520,6 +541,28 @@ async function backupToMarkdown() {
         });
     }
 });
+
+function toggleMusic() {
+    const btn = document.getElementById('playBtn');
+    const star = document.getElementById('star');
+    
+    if (!isPlaying) {
+        player.playVideo();
+        btn.innerText = 'STOP';
+        btn.classList.add('playing');
+        
+        // 재생 시작: 별에 회전 클래스 추가
+        star.classList.add('spinning');
+    } else {
+        player.pauseVideo();
+        btn.innerText = 'PLAY';
+        btn.classList.remove('playing');
+        
+        // 정지: 회전 클래스 제거 (별은 그대로 떠 있음)
+        star.classList.remove('spinning');
+    }
+    isPlaying = !isPlaying;
+}
 </script>
 </body>
 </html>
