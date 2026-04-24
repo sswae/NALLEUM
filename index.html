@@ -77,8 +77,17 @@
 .spinning {
     animation: spin 3s linear infinite;
 }
-</style>
-</style>
+
+        @keyframes blink-color {
+            0% { color: #fffac1; }
+            50% { color: #f8cf39; }
+            100% { color: #fffac1; }
+        }
+        .blinking-text {
+            font-family: 'Press Start 2P';
+            font-size: 16px;
+            animation: blink-color 1s infinite; /* 1초 주기로 무한 반복 */
+        }
     </style>
 </head>
 <body>
