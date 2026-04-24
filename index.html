@@ -506,7 +506,7 @@ function renderBoard(type) {
     
     var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
     var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'OtBHfxU2wmc', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'OtBHfxU2wmc' } }); }
+    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'dTwj7PhpY9M', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'dTwj7PhpY9M' } }); }
     function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
     
 async function backupToMarkdown() {
