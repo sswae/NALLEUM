@@ -82,7 +82,9 @@
     </style>
 </head>
 <body>
-
+<div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background-color:#78a2b9; display:flex; justify-content:center; align-items:center; z-index:99999;">
+    <div style="font-family:'Press Start 2P'; color:#fffac1; font-size:12px;">LOADING...</div>
+</div>
 <div id="app">
 <header>    
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 0 10px;">
@@ -586,6 +588,16 @@ function toggleMusic() {
     }
     isPlaying = !isPlaying;
 }
+
+    window.addEventListener('load', () => {
+    const loader = document.getElementById('loading-screen');
+    // 페이드 아웃 효과
+    loader.style.transition = 'opacity 0.5s';
+    loader.style.opacity = '0';
+    setTimeout(() => {
+        loader.style.display = 'none';
+    }, 500);
+});
 </script>
 </body>
 </html>
