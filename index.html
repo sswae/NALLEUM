@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NALLEUM</title>
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
     <link rel="icon" href="favicon.png" type="favicon/png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -413,7 +415,8 @@ function renderBoard(type) {
         btn.innerText = "SAVING...";
         btn.disabled = true;
 
-        const date = `[${new Date().toISOString().slice(0,10).replace(/-/g,'.')}]`;
+        const now = new Date();
+        const date = `[${now.getFullYear()}.${(now.getMonth()+1).toString().padStart(2, '0')}.${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}]`;
         const { ref, uploadBytes, getDownloadURL, addDoc, collection, updateDoc, doc } = window.fbActions;
         
         try {
