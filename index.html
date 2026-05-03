@@ -4,120 +4,469 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NALLEUM</title>
-    <link rel="apple-touch-icon" href="icon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
-    <link rel="icon" href="favicon.png" type="favicon/png">
+    <link rel="icon" href="favicon.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
+        /* ── Reset & Base ── */
         * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
-        body { background-color: #78a2b9; font-family: 'Press Start 2P', cursive; margin: 0; display: flex; justify-content: center; }
-        #app { width: 100%; max-width: 480px; min-height: 100vh; padding: 20px; position: relative; }
 
+        body {
+            background-color: #78a2b9;
+            font-family: 'Press Start 2P', cursive;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* ── Loading Screen ── */
+        #loading-screen {
+            position: fixed;
+            inset: 0;
+            background-color: #17354d;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            cursor: pointer;
+        }
+
+        /* ── Header ── */
         header { text-align: center; margin-bottom: 30px; }
-        h1 { font-size: 28px; color: #17354d; letter-spacing: 2px; margin-top: 50px; margin-bottom: 60px; }
-        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-top: 30px; margin-bottom: 10px; }
-        .tab-btn, .music-btn { background: none; border: 2px solid #17354d; border-radius: 20px; padding: 8px 15px; font-family: inherit; font-size: 11px; cursor: pointer; color: #17354d; }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #17354d;
+            letter-spacing: 2px;
+            margin-top: 50px;
+            margin-bottom: 60px;
+        }
+
+        /* ── Navigation Tabs ── */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: 2px solid #17354d;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            color: #17354d;
+            transition: transform 0.08s ease, background-color 0.1s;
+        }
+
         .tab-btn.active { background-color: #fffac1; }
-        .music-btn.playing { background-color: #e46b22; color: #fffac1; }
 
-        .editor-box { background-color: #fffac1; border: 1px solid #17354d; padding: 15px; margin-bottom: 20px; }
-        .post-input { width: 100%; background: transparent; border: none; resize: none; font-family: sans-serif; font-size: 14px; outline: none; min-height: 100px; color: #17354d; }
-        
-        .post-item { border-bottom: 1px solid #17354d; padding: 15px 0; color: #17354d; display: flex; flex-direction: column; }
-        .post-item > div:nth-child(2) { white-space: pre-wrap; word-break: break-all; }
-        .post-actions { align-self: flex-end; display: flex; gap: 8px; font-size: 7px; color: #fffac1; cursor: pointer; margin-bottom: 5px; }
+        /* ── Music Button ── */
+        .music-btn {
+            background: none;
+            border: 2px solid #17354d;
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-family: inherit;
+            font-size: 9px;
+            cursor: pointer;
+            color: #17354d;
+            transition: transform 0.08s ease, background-color 0.1s;
+        }
 
-        .diary-card { background-color: #3b74a7; border: 2px solid #17354d; margin-bottom: 25px; padding: 15px; cursor: pointer; position: relative; overflow: hidden; }
-        .diary-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border: 1px solid #17354d; background-color: #5a8fb1; margin-bottom: 12px; display: block; }
-        .diary-card-title { color: #fffac1; font-family: sans-serif; font-weight: bold; font-size: 15px; margin-bottom: 2px; }
-        .diary-card-date { color: #fffac1; font-size: 8px; font-family: 'Press Start 2P'; opacity: 0.8; letter-spacing: -0.5px; }
+        .music-btn.playing {
+            background-color: #e46b22;
+            color: #fffac1;
+        }
 
-        .gb-buttons { position: absolute; right: 15px; bottom: 15px; display: flex; gap: 8px; transform: rotate(-30deg); }
-        .gb-btn { width: 22px; height: 22px; background-color: #17354d; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-family: 'Press Start 2P'; font-size: 10px; color: #5a8fb1; }
+        /* ── Pixel Buttons (shared press effect) ── */
+        .btn-pixel {
+            background-color: #1a2a3a;
+            color: #fffac1;
+            border: 2px solid #000;
+            border-bottom-width: 4px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            font-family: 'Press Start 2P';
+            transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+        }
 
-        #diary-detail-view { display: none; color: #17354d; min-height: 500px; padding-bottom: 50px; }
-        .detail-header-row { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #17354d; padding-bottom: 10px; margin-bottom: 25px; }
-        .detail-title { font-size: 20px; font-family: sans-serif; font-weight: bold; margin-bottom: 5px; color: #17354d; }
-        .detail-date { font-family: 'Press Start 2P'; font-size: 10px; color: #fffac1; }
-        .detail-actions { display: flex; gap: 10px; font-size: 8px; font-family: 'Press Start 2P'; color: #fffac1; cursor: pointer; }
-        .detail-images img { width: 100%; margin-bottom: 15px; border: 1px solid #17354d; cursor: zoom-in; }
-        .detail-content { font-family: sans-serif; font-size: 15px; line-height: 1.7; color: #17354d; margin-bottom: 30px; }
+        /* ── Arcade Press Effect ── */
+        .btn-pixel:active,
+        .tab-btn:active,
+        .music-btn:active {
+            transform: translateY(2px);
+        }
 
-        #diary-full-editor { display: none; background-color: #fffac1; border: 1px solid #17354d; padding: 20px; }
-        #diaryTitleInput { width: 100%; background: transparent; border: none; border-bottom: 2px solid #17354d; font-family: sans-serif; font-size: 18px; font-weight: bold; padding: 10px 0; outline: none; margin-bottom: 15px; }
-        #diaryContentInput { width: 100%; background: transparent; border: none; resize: none; font-family: sans-serif; font-size: 14px; outline: none; min-height: 250px; line-height: 1.6; }
-        
-        .preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-        .preview-item { position: relative; width: 50px; height: 50px; border: 1px solid #17354d; }
+        .btn-pixel:active {
+            border-bottom-width: 2px;
+        }
+
+        /* ── Editor Box ── */
+        .editor-box {
+            background-color: #fffac1;
+            border: 1px solid #17354d;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .post-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: sans-serif;
+            font-size: 14px;
+            outline: none;
+            min-height: 100px;
+            color: #17354d;
+        }
+
+        .editor-controls {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* ── Image Preview ── */
+        .preview-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border: 1px solid #17354d;
+        }
+
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
-        .preview-remove { position: absolute; top: -5px; right: -5px; background: #e46b22; color: white; border-radius: 20%; width: 18px; height: 18px; font-size: 12px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; font-family: sans-serif; }
 
-        .editor-controls { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .btn-pixel { background-color: #1a2a3a; color: #fffac1; border: 1px solid #000; padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; font-family: 'Press Start 2P'; }
-        
-        #imgModal { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; cursor: zoom-out; }
+        .preview-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e46b22;
+            color: white;
+            border-radius: 20%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            font-family: sans-serif;
+        }
+
+        /* ── Post List ── */
+        .post-item {
+            border-bottom: 1px solid #17354d;
+            padding: 15px 0;
+            color: #17354d;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .post-item > div:nth-child(2) { white-space: pre-wrap; word-break: break-all; }
+
+        .post-actions {
+            align-self: flex-end;
+            display: flex;
+            gap: 8px;
+            font-size: 7px;
+            color: #fffac1;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+
+        /* ── Diary Cards ── */
+        .diary-card {
+            background-color: #3b74a7;
+            border: 2px solid #17354d;
+            margin-bottom: 25px;
+            padding: 15px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+            border-bottom-width: 5px;
+        }
+
+        .diary-card:active {
+            transform: translateY(3px);
+            border-bottom-width: 2px;
+        }
+
+        .diary-thumb {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border: 1px solid #17354d;
+            background-color: #5a8fb1;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .diary-card-title {
+            color: #fffac1;
+            font-family: sans-serif;
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .diary-card-date {
+            color: #fffac1;
+            font-size: 8px;
+            font-family: 'Press Start 2P';
+            opacity: 0.8;
+            letter-spacing: -0.5px;
+        }
+
+        .gb-buttons {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            display: flex;
+            gap: 8px;
+            transform: rotate(-30deg);
+        }
+
+        .gb-btn {
+            width: 22px;
+            height: 22px;
+            background-color: #17354d;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Press Start 2P';
+            font-size: 10px;
+            color: #5a8fb1;
+        }
+
+        /* ── Diary Detail View ── */
+        #diary-detail-view {
+            display: none;
+            color: #17354d;
+            min-height: 500px;
+            padding-bottom: 50px;
+        }
+
+        .detail-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #17354d;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+
+        .detail-title {
+            font-size: 20px;
+            font-family: sans-serif;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #17354d;
+        }
+
+        .detail-date {
+            font-family: 'Press Start 2P';
+            font-size: 10px;
+            color: #fffac1;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 10px;
+            font-size: 8px;
+            font-family: 'Press Start 2P';
+            color: #fffac1;
+            cursor: pointer;
+        }
+
+        .detail-images img {
+            width: 100%;
+            margin-bottom: 15px;
+            border: 1px solid #17354d;
+            cursor: zoom-in;
+        }
+
+        .detail-content {
+            font-family: sans-serif;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #17354d;
+            margin-bottom: 30px;
+        }
+
+        /* ── Diary Full Editor ── */
+        #diary-full-editor {
+            display: none;
+            background-color: #fffac1;
+            border: 1px solid #17354d;
+            padding: 20px;
+        }
+
+        #diaryTitleInput {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #17354d;
+            font-family: sans-serif;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 0;
+            outline: none;
+            margin-bottom: 15px;
+        }
+
+        #diaryContentInput {
+            width: 100%;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: sans-serif;
+            font-size: 14px;
+            outline: none;
+            min-height: 250px;
+            line-height: 1.6;
+        }
+
+        /* ── Image Modal ── */
+        #imgModal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+
         #imgModal img { max-width: 95%; max-height: 95%; object-fit: contain; }
 
+        /* ── Misc ── */
         #youtube-player { display: none; }
-        .backup-wrapper { text-align: center; width: 100%; }
-        .backup-text { font-size: 10px; color: #1a2a3a; cursor: pointer; transition: all 0.3s; }
+
+        .backup-text {
+            font-size: 10px;
+            color: #1a2a3a;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
         .backup-text:hover { color: #ffffff; }
 
-        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; padding-bottom: 20px; }
-        .page-btn { cursor: pointer; color: #fffac1; font-family: 'Press Start 2P'; font-size: 10px; }
+        /* ── Pagination ── */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        .page-btn {
+            cursor: pointer;
+            color: #fffac1;
+            font-family: 'Press Start 2P';
+            font-size: 10px;
+            transition: transform 0.08s ease;
+        }
+
+        .page-btn:active { transform: scale(0.9); }
         .page-btn.active { color: #e46b22; text-decoration: underline; }
 
-/* 별 회전 애니메이션 */
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
+        /* ── Animations ── */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
 
-/* spinning 클래스가 붙으면 회전 시작 */
-.spinning {
-    animation: spin 3s linear infinite;
-}
+        .spinning { animation: spin 3s linear infinite; }
 
         @keyframes blink-color {
-            0% { color: #fffac1; }
+            0%, 100% { color: #fffac1; }
             50% { color: #f8cf39; }
-            100% { color: #fffac1; }
         }
+
         .blinking-text {
             font-family: 'Press Start 2P';
             font-size: 16px;
-            animation: blink-color 1s infinite; /* 1초 주기로 무한 반복 */
+            animation: blink-color 1s infinite;
         }
+
+        /* ── Coin insert flash on load ── */
+        @keyframes coin-flash {
+            0%   { opacity: 0; transform: scale(0.85); }
+            15%  { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        #app { animation: coin-flash 0.4s ease-out both; }
     </style>
 </head>
 <body>
-<div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background-color:#17354d; display:flex; justify-content:center; align-items:center; z-index:99999; cursor:pointer;" onclick="enterApp()">
-    <div div id="start-text" class="blinking-text" style="font-family:'Press Start 2P'; font-size:16px; color:#fffac1;">⭐️ PRESS START ⭐️</div>
+
+<!-- Loading Screen -->
+<div id="loading-screen" onclick="enterApp()">
+    <div class="blinking-text">⭐️ PRESS START ⭐️</div>
 </div>
+
 <div id="app">
-<header>    
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding: 0 10px;">
-    <span class="backup-text" onclick="backupToMarkdown()">✏️REPORT</span>
-    
-    <div style="display:flex; align-items:center; gap:8px;">
-        <div id="star" style="font-size:20px;">⭐️</div> 
-        <button id="playBtn" class="music-btn" onclick="toggleMusic()" style="padding: 5px 10px; font-size: 9px;">PLAY</button>
-    </div>
-</div>
+    <header>
+        <div class="header-row">
+            <span class="backup-text" onclick="backupToMarkdown()">✏️REPORT</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div id="star" style="font-size:20px;">⭐️</div>
+                <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
+            </div>
+        </div>
 
-<h1>NALLEUM</h1>
+        <h1>NALLEUM</h1>
 
-    <div class="nav-tabs">
-        <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
-        <button id="tabNeg" class="tab-btn" onclick="switchTab('NEG')">NEG</button>
-        <button id="tabDiary" class="tab-btn" onclick="switchTab('DIARY')">DIARY</button>
-    </div>
-</header>
+        <div class="nav-tabs">
+            <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
+            <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')">NEG</button>
+            <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
+        </div>
+    </header>
 
     <div id="youtube-player"></div>
 
+    <!-- BUBBLE Tab -->
     <div id="bubble-container">
         <div class="editor-box">
             <textarea id="bubble-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
@@ -132,6 +481,7 @@
         <div id="bubble-pagination" class="pagination"></div>
     </div>
 
+    <!-- NEG Tab -->
     <div id="neg-container" style="display:none">
         <div class="editor-box">
             <textarea id="neg-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
@@ -146,31 +496,35 @@
         <div id="neg-pagination" class="pagination"></div>
     </div>
 
+    <!-- DIARY Tab -->
     <div id="diary-container" style="display:none">
         <div style="text-align:right; margin-bottom:15px;">
-            <span style="font-size:10px; color:#fffac1; cursor:pointer; font-family:'Press Start 2P';" onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
+            <span style="font-size:10px; color:#fffac1; cursor:pointer; font-family:'Press Start 2P';"
+                  onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
         </div>
         <div id="diary-list"></div>
     </div>
 
+    <!-- Diary Detail -->
     <div id="diary-detail-view">
         <div class="detail-header-row">
             <div>
                 <div id="detailTitle" class="detail-title"></div>
-                <div id="detailDate" class="detail-date"></div>
+                <div id="detailDate"  class="detail-date"></div>
             </div>
             <div class="detail-actions">
                 <span id="detailEditBtn">EDIT</span>
                 <span id="detailDelBtn">DEL</span>
             </div>
         </div>
-        <div id="detailImages" class="detail-images"></div>
+        <div id="detailImages"  class="detail-images"></div>
         <div id="detailContent" class="detail-content"></div>
         <div class="editor-controls">
             <button class="btn-pixel" style="background:#e46b22" onclick="closeDiaryDetail()">CLOSE</button>
         </div>
     </div>
 
+    <!-- Diary Editor -->
     <div id="diary-full-editor">
         <input type="text" id="diaryTitleInput" placeholder="제목">
         <textarea id="diaryContentInput" placeholder="내용"></textarea>
@@ -186,183 +540,218 @@
 
 <div id="imgModal" onclick="this.style.display='none'"><img id="modalImg"></div>
 
+<!-- Firebase Module -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc, getCountFromServer, limit, startAfter } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import {
+        getFirestore, collection, addDoc, getDocs, query, orderBy,
+        doc, deleteDoc, updateDoc, getCountFromServer, limit, startAfter
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import {
+        getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBHMSPEsozQp2ZcanrRWy0-ZE7aoxviDgE",
-    authDomain: "nalleum.firebaseapp.com",
-    projectId: "nalleum",
-    storageBucket: "nalleum.firebasestorage.app",
-    messagingSenderId: "889977175883",
-    appId: "1:889977175883:web:553b25bd73cb0d758332ce"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyBHMSPEsozQp2ZcanrRWy0-ZE7aoxviDgE",
+        authDomain: "nalleum.firebaseapp.com",
+        projectId: "nalleum",
+        storageBucket: "nalleum.firebasestorage.app",
+        messagingSenderId: "889977175883",
+        appId: "1:889977175883:web:553b25bd73cb0d758332ce"
+    };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const storage = getStorage(app); 
+    const app     = initializeApp(firebaseConfig);
+    const db      = getFirestore(app);
+    const storage = getStorage(app);
 
-window.db = db;
-window.storage = storage;
-window.fbActions = { 
-    ref, uploadBytes, getDownloadURL, addDoc, collection, 
-    getDocs, query, orderBy, doc, deleteDoc, updateDoc, deleteObject, getCountFromServer, limit
-};
+    window.db      = db;
+    window.storage = storage;
+    window.fbActions = {
+        ref, uploadBytes, getDownloadURL,
+        addDoc, collection, getDocs, query, orderBy,
+        doc, deleteDoc, updateDoc, deleteObject,
+        getCountFromServer, limit
+    };
 
-// 페이지 상태 관리
-const postsPerPage = 20;
-let lastVisible = []; // 각 페이지의 마지막 문서 참조를 저장
+    // ── Pagination state ──
+    const POSTS_PER_PAGE = 20;
+    let lastVisible = [];
 
-async function loadPosts(type, page = 1) {
-    const coll = collection(window.db, type);
-    
-    // 1. 전체 게시물 수 구하기
-    const snapshot = await getCountFromServer(coll);
-    const totalPosts = snapshot.data().count;
-    const totalPages = Math.ceil(totalPosts / postsPerPage) || 1;
-    
-    // 2. 쿼리 설정
-    let q;
-    if (page === 1) {
-        q = query(coll, orderBy("createdAt", "desc"), limit(postsPerPage));
-    } else {
-        // 이전 페이지의 마지막 문서를 기준으로 데이터 가져오기
-        q = query(coll, orderBy("createdAt", "desc"), startAfter(lastVisible[page - 2]), limit(postsPerPage));
+    async function loadPosts(type, page = 1) {
+        const coll  = collection(window.db, type);
+        const snap  = await getCountFromServer(coll);
+        const total = Math.ceil(snap.data().count / POSTS_PER_PAGE) || 1;
+
+        const q = (page === 1)
+            ? query(coll, orderBy("createdAt", "desc"), limit(POSTS_PER_PAGE))
+            : query(coll, orderBy("createdAt", "desc"), startAfter(lastVisible[page - 2]), limit(POSTS_PER_PAGE));
+
+        const result = await getDocs(q);
+        lastVisible[page - 1] = result.docs[result.docs.length - 1];
+
+        window[type.toLowerCase() + 'Posts'] = result.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderBoard(type);
+        renderPagination(type, page, total);
     }
-    
-    const querySnapshot = await getDocs(q);
-    
-    // 현재 페이지의 마지막 문서를 저장
-    lastVisible[page - 1] = querySnapshot.docs[querySnapshot.docs.length - 1];
-    
-    window[type.toLowerCase() + 'Posts'] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderBoard(type);
-    renderPagination(type, page, totalPages);
-}
 
-// 페이지 버튼 렌더링
-function renderPagination(type, currentPage, totalPages) {
-    const container = document.getElementById(type.toLowerCase() + '-pagination');
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-        html += `<span class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadPosts('${type}', ${i})">[${i}]</span>`;
+    function renderPagination(type, current, total) {
+        const container = document.getElementById(type.toLowerCase() + '-pagination');
+        container.innerHTML = Array.from({ length: total }, (_, i) => i + 1)
+            .map(i => `<span class="page-btn ${i === current ? 'active' : ''}" onclick="loadPosts('${type}', ${i})">[${i}]</span>`)
+            .join('');
     }
-    container.innerHTML = html;
-}
 
-// 초기 로딩 시 데이터 호출
-loadPosts('BUBBLE', 1);
-loadPosts('NEG', 1);
-// DIARY는 기존 방식 유지
-async function loadDiary() {
-    const { getDocs, collection, query, orderBy } = window.fbActions;
-    const q = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    window.diaryPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderBoard('DIARY');
-}
-loadDiary();
+    async function loadDiary() {
+        const { getDocs, collection, query, orderBy } = window.fbActions;
+        const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        window.diaryPosts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderBoard('DIARY');
+    }
 
-window.loadPosts = loadPosts;
-window.loadDiary = loadDiary;
+    loadPosts('BUBBLE', 1);
+    loadPosts('NEG', 1);
+    loadDiary();
+
+    window.loadPosts = loadPosts;
+    window.loadDiary = loadDiary;
 </script>
 
+<!-- App Logic -->
 <script>
-    let tempImages = []; 
-    let tempFiles = [];  
+    // ── State ──
+    let tempImages = [];
+    let tempFiles  = [];
     let editDiaryId = null;
-    let editPostId = null; 
+    let editPostId  = null;
     let player, isPlaying = false;
     const DEFAULT_IMAGES = ["default1.png", "default2.png"];
 
-    function switchTab(tab) {
-        document.getElementById('tabBubble').classList.toggle('active', tab === 'BUBBLE');
-        document.getElementById('tabNeg').classList.toggle('active', tab === 'NEG');
-        document.getElementById('tabDiary').classList.toggle('active', tab === 'DIARY');
-        
-        document.getElementById('bubble-container').style.display = (tab === 'BUBBLE') ? 'block' : 'none';
-        document.getElementById('neg-container').style.display = (tab === 'NEG') ? 'block' : 'none';
-        document.getElementById('diary-container').style.display = (tab === 'DIARY') ? 'block' : 'none';
-        
-        document.getElementById('diary-full-editor').style.display = 'none';
-        document.getElementById('diary-detail-view').style.display = 'none';
+    // ── Loading screen ──
+    function enterApp() {
+        const loader = document.getElementById('loading-screen');
+        loader.style.transition = 'opacity 0.5s';
+        loader.style.opacity = '0';
+        setTimeout(() => loader.style.display = 'none', 500);
     }
 
-function renderBoard(type) {
-    if(type === 'DIARY') return renderDiary();
-    
-    const listContainer = document.getElementById(type.toLowerCase() + '-list');
-    const posts = window[type.toLowerCase() + 'Posts'] || [];
-    
-    // 링크 변환 함수
-    const linkify = (text) => {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color: #227be4; text-decoration: underline;">${url}</a>`);
-    };
-    
-    listContainer.innerHTML = posts.map((p) => {
-        // 미리 링크를 처리하여 공백 문제 방지
-        const linkedContent = linkify(p.content);
-        
-        return `
-        <div class="post-item">
-            <div class="post-actions">
-                <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
-                <span onclick="deletePost('${type}', '${p.id}', ${JSON.stringify(p.images || [])})">DEL</span>
+    window.addEventListener('load', enterApp);
+
+    // ── Tab switching ──
+    function switchTab(tab) {
+        ['BUBBLE', 'NEG', 'DIARY'].forEach(t => {
+            document.getElementById('tab' + t.charAt(0) + t.slice(1).toLowerCase()).classList.toggle('active', t === tab);
+            document.getElementById(t.toLowerCase() + '-container').style.display = (t === tab) ? 'block' : 'none';
+        });
+        document.getElementById('diary-full-editor').style.display  = 'none';
+        document.getElementById('diary-detail-view').style.display  = 'none';
+    }
+
+    // ── Render ──
+    function linkify(text) {
+        return text.replace(/(https?:\/\/[^\s]+)/g,
+            url => `<a href="${url}" target="_blank" style="color:#227be4; text-decoration:underline;">${url}</a>`);
+    }
+
+    function renderBoard(type) {
+        if (type === 'DIARY') return renderDiary();
+
+        const posts     = window[type.toLowerCase() + 'Posts'] || [];
+        const container = document.getElementById(type.toLowerCase() + '-list');
+
+        container.innerHTML = posts.map(p => `
+            <div class="post-item">
+                <div class="post-actions">
+                    <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
+                    <span onclick="deletePost('${type}', '${p.id}', ${JSON.stringify(p.images || [])})">DEL</span>
+                </div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${linkify(p.content)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
+                <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
+                    ${(p.images || []).map(img =>
+                        `<img src="${img}" onclick="showModal('${img}')"
+                              style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`
+                    ).join('')}
+                </div>
             </div>
-            <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${linkedContent} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
-            <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
-                ${(p.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')" style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`).join('')}
-            </div>
-        </div>`;
-    }).join('');
-}
+        `).join('');
+    }
 
     function renderDiary() {
-        const listContainer = document.getElementById('diary-list');
-        const posts = window.diaryPosts || [];
+        const container = document.getElementById('diary-list');
+        const posts     = window.diaryPosts || [];
+
         if (posts.length === 0) {
-            listContainer.innerHTML = '<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">NO ADVENTURES YET.</div>';
+            container.innerHTML = '<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">NO ADVENTURES YET.</div>';
             return;
         }
-        listContainer.innerHTML = posts.map(p => {
-            let thumbSrc = (p.images && p.images.length > 0) ? p.images[0] : DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
+
+        container.innerHTML = posts.map(p => {
+            const thumb = (p.images && p.images.length > 0)
+                ? p.images[0]
+                : DEFAULT_IMAGES[Math.floor(Math.random() * DEFAULT_IMAGES.length)];
             return `
                 <div class="diary-card" onclick="openDiaryDetail('${p.id}')">
-                    <img class="diary-thumb" src="${thumbSrc}">
+                    <img class="diary-thumb" src="${thumb}">
                     <div class="diary-card-info">
                         <div class="diary-card-title">${p.title}</div>
                         <div class="diary-card-date">${p.date}</div>
                     </div>
                     <div class="gb-buttons">
-                        <div class="gb-btn">B</div><div class="gb-btn">A</div>
+                        <div class="gb-btn">B</div>
+                        <div class="gb-btn">A</div>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
+    // ── Diary navigation ──
     function openDiaryDetail(id) {
         const post = window.diaryPosts.find(p => p.id === id);
-        if(!post) return;
-        document.getElementById('diary-container').style.display = 'none';
+        if (!post) return;
+
+        document.getElementById('diary-container').style.display   = 'none';
         document.getElementById('diary-detail-view').style.display = 'block';
-        document.getElementById('detailTitle').innerText = post.title;
-        document.getElementById('detailDate').innerText = post.date;
+        document.getElementById('detailTitle').innerText   = post.title;
+        document.getElementById('detailDate').innerText    = post.date;
         document.getElementById('detailContent').innerHTML = post.content.replace(/\n/g, '<br>');
-        document.getElementById('detailImages').innerHTML = (post.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')">`).join('');
+        document.getElementById('detailImages').innerHTML  =
+            (post.images || []).map(img => `<img src="${img}" onclick="showModal('${img}')">`).join('');
         document.getElementById('detailEditBtn').onclick = () => startEditDiary(post.id);
-        document.getElementById('detailDelBtn').onclick = () => deletePost('DIARY', post.id, post.images);
+        document.getElementById('detailDelBtn').onclick  = () => deletePost('DIARY', post.id, post.images);
         window.scrollTo(0, 0);
     }
 
+    function closeDiaryDetail() {
+        document.getElementById('diary-detail-view').style.display = 'none';
+        document.getElementById('diary-container').style.display   = 'block';
+    }
+
+    function openDiaryEditor() {
+        document.getElementById('diary-container').style.display   = 'none';
+        document.getElementById('diary-detail-view').style.display = 'none';
+        document.getElementById('diary-full-editor').style.display = 'block';
+
+        editDiaryId = null;
+        document.getElementById('diarySendBtn').innerText     = 'SEND';
+        document.getElementById('diaryTitleInput').value      = '';
+        document.getElementById('diaryContentInput').value    = '';
+        tempImages = [];
+        tempFiles  = [];
+        updatePreview('diary-previews');
+    }
+
+    function closeDiaryEditor() {
+        document.getElementById('diary-full-editor').style.display = 'none';
+        document.getElementById('diary-container').style.display   = 'block';
+    }
+
+    // ── Image handling ──
     function handleImg(input, type) {
         Array.from(input.files).forEach(file => {
             tempFiles.push(file);
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = e => {
                 tempImages.push(e.target.result);
                 updatePreview(type.toLowerCase() + '-previews');
             };
@@ -370,46 +759,50 @@ function renderBoard(type) {
         });
     }
 
-    function updatePreview(id) {
-        const container = document.getElementById(id);
-        if(!container) return;
+    function updatePreview(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
         container.innerHTML = tempImages.map((src, i) => `
             <div class="preview-item">
                 <img src="${src}">
-                <div class="preview-remove" onclick="removeTempImage(${i}, '${id}')">×</div>
+                <div class="preview-remove" onclick="removeTempImage(${i}, '${containerId}')">×</div>
             </div>
         `).join('');
     }
 
-    function removeTempImage(index, id) {
+    function removeTempImage(index, containerId) {
         tempImages.splice(index, 1);
         tempFiles.splice(index, 1);
-        updatePreview(id);
+        updatePreview(containerId);
     }
 
+    // ── Save post ──
     async function savePost(type) {
-        const btn = document.getElementById(type.toLowerCase() + 'SendBtn');
+        const btnId = type.toLowerCase() + 'SendBtn';
+        const btn   = document.getElementById(btnId);
         btn.innerText = "SAVING...";
-        btn.disabled = true;
+        btn.disabled  = true;
 
-        const now = new Date();
-        const date = `[${now.getFullYear()}.${(now.getMonth()+1).toString().padStart(2, '0')}.${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}]`;
+        const now  = new Date();
+        const date = `[${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}]`;
         const { ref, uploadBytes, getDownloadURL, addDoc, collection, updateDoc, doc } = window.fbActions;
-        
+
         try {
+            // Upload new files
             const imageUrls = [];
             for (const file of tempFiles) {
                 const storageRef = ref(window.storage, `images/${Date.now()}_${file.name}`);
                 await uploadBytes(storageRef, file);
-                const url = await getDownloadURL(storageRef);
-                imageUrls.push(url);
+                imageUrls.push(await getDownloadURL(storageRef));
             }
 
             if (type === 'BUBBLE' || type === 'NEG') {
                 const inputEl = document.getElementById(type.toLowerCase() + '-text');
                 const content = inputEl.value;
+
                 if (editPostId) {
-                    await updateDoc(doc(window.db, type, editPostId), { content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
+                    const merged = [...tempImages.filter(img => img.startsWith('http')), ...imageUrls];
+                    await updateDoc(doc(window.db, type, editPostId), { content, images: merged });
                     editPostId = null;
                 } else {
                     await addDoc(collection(window.db, type), { content, images: imageUrls, date, createdAt: Date.now() });
@@ -417,10 +810,12 @@ function renderBoard(type) {
                 inputEl.value = '';
                 loadPosts(type, 1);
             } else {
-                const title = document.getElementById('diaryTitleInput').value || "NO TITLE";
+                const title   = document.getElementById('diaryTitleInput').value || "NO TITLE";
                 const content = document.getElementById('diaryContentInput').value;
+
                 if (editDiaryId) {
-                    await updateDoc(doc(window.db, "DIARY", editDiaryId), { title, content, images: [...tempImages.filter(img => img.startsWith('http')), ...imageUrls] });
+                    const merged = [...tempImages.filter(img => img.startsWith('http')), ...imageUrls];
+                    await updateDoc(doc(window.db, "DIARY", editDiaryId), { title, content, images: merged });
                     editDiaryId = null;
                 } else {
                     await addDoc(collection(window.db, "DIARY"), { title, content, images: imageUrls, date, createdAt: Date.now() });
@@ -428,15 +823,22 @@ function renderBoard(type) {
                 closeDiaryEditor();
                 loadDiary();
             }
-            tempImages = []; tempFiles = []; updatePreview(type.toLowerCase() + '-previews');
-        } catch (e) { console.error(e); alert("저장 실패!"); }
+
+            tempImages = [];
+            tempFiles  = [];
+            updatePreview(type.toLowerCase() + '-previews');
+        } catch (e) {
+            console.error(e);
+            alert("저장 실패!");
+        }
 
         btn.innerText = "SEND";
-        btn.disabled = false;
+        btn.disabled  = false;
     }
 
+    // ── Delete post ──
     async function deletePost(type, id, images) {
-        if(!confirm("✂️정말 삭제하시겠습니까?")) return;
+        if (!confirm("✂️정말 삭제하시겠습니까?")) return;
         const { doc, deleteDoc, ref, deleteObject } = window.fbActions;
         try {
             await deleteDoc(doc(window.db, type, id));
@@ -445,18 +847,19 @@ function renderBoard(type) {
                     try {
                         const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
                         await deleteObject(ref(window.storage, imgPath));
-                    } catch(e) {}
+                    } catch (e) {}
                 }
             }
-            if(type === 'DIARY') { closeDiaryDetail(); loadDiary(); }
+            if (type === 'DIARY') { closeDiaryDetail(); loadDiary(); }
             else loadPosts(type, 1);
         } catch (e) { console.error(e); }
     }
 
+    // ── Edit ──
     function startEditPost(type, id) {
-        const p = window[type.toLowerCase() + 'Posts'].find(x => x.id === id);
-        document.getElementById(type.toLowerCase() + '-text').value = p.content;
-        tempImages = [...(p.images || [])];
+        const post = window[type.toLowerCase() + 'Posts'].find(x => x.id === id);
+        document.getElementById(type.toLowerCase() + '-text').value = post.content;
+        tempImages = [...(post.images || [])];
         updatePreview(type.toLowerCase() + '-previews');
         editPostId = id;
         document.getElementById(type.toLowerCase() + 'SendBtn').innerText = 'EDIT';
@@ -464,129 +867,98 @@ function renderBoard(type) {
     }
 
     function startEditDiary(id) {
-        const p = window.diaryPosts.find(x => x.id === id);
+        const post = window.diaryPosts.find(x => x.id === id);
         openDiaryEditor();
-        document.getElementById('diaryTitleInput').value = p.title;
-        document.getElementById('diaryContentInput').value = p.content;
-        tempImages = [...(p.images || [])];
+        document.getElementById('diaryTitleInput').value   = post.title;
+        document.getElementById('diaryContentInput').value = post.content;
+        tempImages = [...(post.images || [])];
         updatePreview('diary-previews');
         editDiaryId = id;
         document.getElementById('diarySendBtn').innerText = 'EDIT';
     }
 
-    function showModal(src) { document.getElementById('modalImg').src = src; document.getElementById('imgModal').style.display = 'flex'; }
-    function closeDiaryDetail() { document.getElementById('diary-detail-view').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
-    function openDiaryEditor() { 
-    document.getElementById('diary-container').style.display = 'none'; 
-    document.getElementById('diary-detail-view').style.display = 'none'; 
-    document.getElementById('diary-full-editor').style.display = 'block'; 
-    
-    // 추가된 부분: 수정 모드 해제 및 버튼 텍스트 초기화
-    editDiaryId = null; 
-    document.getElementById('diarySendBtn').innerText = 'SEND'; 
-    document.getElementById('diaryTitleInput').value = ''; // 제목 초기화
-    document.getElementById('diaryContentInput').value = ''; // 내용 초기화
-    
-    tempImages = []; 
-    tempFiles = []; 
-    updatePreview('diary-previews'); 
-}
-    function closeDiaryEditor() { document.getElementById('diary-full-editor').style.display = 'none'; document.getElementById('diary-container').style.display = 'block'; }
-    
-    var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-    function onYouTubeIframeAPIReady() { player = new YT.Player('youtube-player', { height: '0', width: '0', videoId: 'GMxzozfVzxI', playerVars: { 'autoplay': 0, 'loop': 1, 'playlist': 'GMxzozfVzxI' } }); }
-    function toggleMusic() { const btn = document.getElementById('playBtn'); if (!isPlaying) { player.playVideo(); btn.innerText = 'STOP'; btn.classList.add('playing'); } else { player.pauseVideo(); btn.innerText = 'PLAY'; btn.classList.remove('playing'); } isPlaying = !isPlaying; }
-    
-async function backupToMarkdown() {
-    const { getDocs, collection, query, orderBy } = window.fbActions;
-    const q = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
-    
-    const zip = new JSZip();
-    const imgFolder = zip.folder("images");
-    let md = "# NALLEUM BUBBLE BACKUP\n\n";
-
-    for (const d of snap.docs) {
-        const data = d.data();
-        md += `## ${data.date}\n${data.content}\n`;
-        
-        if (data.images) {
-            for (let i = 0; i < data.images.length; i++) {
-                const url = data.images[i];
-                const fileName = `img_${d.id}_${i}.png`;
-                
-                // 1. URL에서 이미지 데이터(Blob) 가져오기
-                const response = await fetch(url);
-                const blob = await response.blob();
-                
-                // 2. ZIP의 images 폴더에 넣기
-                imgFolder.file(fileName, blob);
-                
-                // 3. 마크다운 링크를 로컬 경로로 변경
-                md += `![img](images/${fileName})\n`;
-            }
-        }
-        md += "\n---\n\n";
+    // ── Modal ──
+    function showModal(src) {
+        document.getElementById('modalImg').src        = src;
+        document.getElementById('imgModal').style.display = 'flex';
     }
 
-    // 4. 마크다운 파일 추가 및 ZIP 다운로드
-    zip.file("backup.md", md);
-    zip.generateAsync({ type: "blob" }).then(content => {
+    // ── Music ──
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.getElementsByTagName('script')[0].parentNode.insertBefore(tag, document.getElementsByTagName('script')[0]);
+
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('youtube-player', {
+            height: '0', width: '0',
+            videoId: 'GMxzozfVzxI',
+            playerVars: { autoplay: 0, loop: 1, playlist: 'GMxzozfVzxI' }
+        });
+    }
+
+    function toggleMusic() {
+        const btn  = document.getElementById('playBtn');
+        const star = document.getElementById('star');
+
+        if (!isPlaying) {
+            player.playVideo();
+            btn.innerText = 'STOP';
+            btn.classList.add('playing');
+            star.classList.add('spinning');
+        } else {
+            player.pauseVideo();
+            btn.innerText = 'PLAY';
+            btn.classList.remove('playing');
+            star.classList.remove('spinning');
+        }
+        isPlaying = !isPlaying;
+    }
+
+    // ── Backup ──
+    async function backupToMarkdown() {
+        const { getDocs, collection, query, orderBy } = window.fbActions;
+        const q    = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+
+        const zip       = new JSZip();
+        const imgFolder = zip.folder("images");
+        let md = "# NALLEUM BUBBLE BACKUP\n\n";
+
+        for (const d of snap.docs) {
+            const data = d.data();
+            md += `## ${data.date}\n${data.content}\n`;
+
+            if (data.images) {
+                for (let i = 0; i < data.images.length; i++) {
+                    const fileName = `img_${d.id}_${i}.png`;
+                    const blob     = await (await fetch(data.images[i])).blob();
+                    imgFolder.file(fileName, blob);
+                    md += `![img](images/${fileName})\n`;
+                }
+            }
+            md += "\n---\n\n";
+        }
+
+        zip.file("backup.md", md);
+        const content = await zip.generateAsync({ type: "blob" });
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(content);
+        a.href     = URL.createObjectURL(content);
         a.download = `nalleum_backup_${new Date().toISOString().split('T')[0]}.zip`;
         a.click();
-    });
-}
+    }
 
-    // BUBBLE, NEG, DIARY 각각에 대해 이벤트 설정
-['bubble-text', 'neg-text', 'diaryContentInput'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener('keydown', function(e) {
-            // Ctrl(또는 Mac의 Cmd) + Enter를 누르면
+    // ── Ctrl+Enter to send ──
+    ['bubble-text', 'neg-text', 'diaryContentInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                // 해당 탭에 맞는 저장 함수 호출
-                if (id === 'bubble-text') savePost('BUBBLE');
-                else if (id === 'neg-text') savePost('NEG');
+                if (id === 'bubble-text')        savePost('BUBBLE');
+                else if (id === 'neg-text')      savePost('NEG');
                 else if (id === 'diaryContentInput') savePost('DIARY');
             }
         });
-    }
-});
-
-function toggleMusic() {
-    const btn = document.getElementById('playBtn');
-    const star = document.getElementById('star');
-    
-    if (!isPlaying) {
-        player.playVideo();
-        btn.innerText = 'STOP';
-        btn.classList.add('playing');
-        
-        // 재생 시작: 별에 회전 클래스 추가
-        star.classList.add('spinning');
-    } else {
-        player.pauseVideo();
-        btn.innerText = 'PLAY';
-        btn.classList.remove('playing');
-        
-        // 정지: 회전 클래스 제거 (별은 그대로 떠 있음)
-        star.classList.remove('spinning');
-    }
-    isPlaying = !isPlaying;
-}
-
-    window.addEventListener('load', () => {
-    const loader = document.getElementById('loading-screen');
-    // 페이드 아웃 효과
-    loader.style.transition = 'opacity 0.5s';
-    loader.style.opacity = '0';
-    setTimeout(() => {
-        loader.style.display = 'none';
-    }, 500);
-});
+    });
 </script>
 </body>
 </html>
