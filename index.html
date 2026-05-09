@@ -892,7 +892,15 @@
         player = new YT.Player('youtube-player', {
             height: '0', width: '0',
             videoId: 'GMxzozfVzxI',
-            playerVars: { autoplay: 0, loop: 1, playlist: 'GMxzozfVzxI' }
+            playerVars: { autoplay: 0, loop: 1, playlist: 'GMxzozfVzxI' },
+            events: {
+                onStateChange: function(e) {
+                    if (e.data === YT.PlayerState.ENDED) {
+                        player.seekTo(0);
+                        player.playVideo();
+                    }
+                }
+            }
         });
     }
 
