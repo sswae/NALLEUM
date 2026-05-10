@@ -653,8 +653,13 @@
         const start = (page - 1) * POSTS_PER_PAGE;
         window[type.toLowerCase() + 'Posts'] = all.slice(start, start + POSTS_PER_PAGE);
 
+        // show pagination (might be hidden during search)
+        const pg = document.getElementById(type.toLowerCase() + '-pagination');
+        if (pg) pg.style.display = 'flex';
+
         renderBoard(type);
         renderPagination(type, page, total);
+        window.scrollTo(0, 0);
     }
 
     function renderPagination(type, current, total) {
