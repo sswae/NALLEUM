@@ -428,6 +428,66 @@
             animation: blink-color 1s infinite;
         }
 
+        /* ── Global Search Bar ── */
+        .global-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px;
+            margin-bottom: 14px;
+        }
+
+        .search-icon {
+            font-size: 11px;
+            opacity: 0.4;
+            color: #17354d;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(23, 53, 77, 0.3);
+            padding: 4px 2px;
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            color: #17354d;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus { border-bottom-color: rgba(23, 53, 77, 0.65); }
+        .search-input::placeholder { color: #17354d; opacity: 0.3; }
+
+        .search-clear {
+            font-size: 10px;
+            color: #17354d;
+            opacity: 0;
+            cursor: pointer;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+
+        .search-clear.visible { opacity: 0.35; }
+        .search-clear.visible:hover { opacity: 0.7; }
+
+        .search-count {
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            color: #f8cf39;
+            text-align: right;
+            margin-bottom: 10px;
+            min-height: 14px;
+        }
+
+        mark.hl {
+            background: #f8cf39;
+            color: #17354d;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
         /* ── Coin insert flash on load ── */
         @keyframes coin-flash {
             0%   { opacity: 0; transform: scale(0.85); }
@@ -447,6 +507,11 @@
 
 <div id="app">
     <header>
+        <div class="global-search-bar">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="global-search" placeholder="SEARCH..." oninput="onSearch()" autocomplete="off">
+            <span class="search-clear" id="search-clear-btn" onclick="clearSearch()">✕</span>
+        </div>
         <div class="header-row">
             <span class="backup-text" onclick="backupToMarkdown()">✏️REPORT</span>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -477,6 +542,7 @@
                 <button id="bubbleSendBtn" class="btn-pixel" onclick="savePost('BUBBLE')">SEND</button>
             </div>
         </div>
+        <div class="search-count" id="bubble-search-count"></div>
         <div id="bubble-list"></div>
         <div id="bubble-pagination" class="pagination"></div>
     </div>
@@ -492,6 +558,7 @@
                 <button id="negSendBtn" class="btn-pixel" onclick="savePost('NEG')">SEND</button>
             </div>
         </div>
+        <div class="search-count" id="neg-search-count"></div>
         <div id="neg-list"></div>
         <div id="neg-pagination" class="pagination"></div>
     </div>
@@ -502,6 +569,7 @@
             <span style="font-size:10px; color:#fffac1; cursor:pointer; font-family:'Press Start 2P';"
                   onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
         </div>
+        <div class="search-count" id="diary-search-count"></div>
         <div id="diary-list"></div>
     </div>
 
@@ -647,6 +715,45 @@
         document.getElementById('diary-detail-view').style.display  = 'none';
     }
 
+    // ── Search ──
+    let searchQuery = '';
+
+    function onSearch() {
+        const input = document.getElementById('global-search');
+        searchQuery = input.value.trim();
+        const clearBtn = document.getElementById('search-clear-btn');
+        clearBtn.classList.toggle('visible', searchQuery.length > 0);
+        // hide pagination during search
+        ['bubble','neg'].forEach(t => {
+            const pg = document.getElementById(t + '-pagination');
+            if (pg) pg.style.display = searchQuery ? 'none' : 'flex';
+        });
+        renderBoard('BUBBLE');
+        renderBoard('NEG');
+        renderBoard('DIARY');
+    }
+
+    function clearSearch() {
+        searchQuery = '';
+        document.getElementById('global-search').value = '';
+        document.getElementById('search-clear-btn').classList.remove('visible');
+        ['bubble','neg'].forEach(t => {
+            const pg = document.getElementById(t + '-pagination');
+            if (pg) pg.style.display = 'flex';
+            document.getElementById(t + '-search-count').innerText = '';
+        });
+        document.getElementById('diary-search-count').innerText = '';
+        renderBoard('BUBBLE');
+        renderBoard('NEG');
+        renderBoard('DIARY');
+    }
+
+    function highlight(text, kw) {
+        if (!kw) return text;
+        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp(escaped, 'gi'), m => `<mark class="hl">${m}</mark>`);
+    }
+
     // ── Render ──
     function linkify(text) {
         return text.replace(/(https?:\/\/[^\s]+)/g,
@@ -656,8 +763,18 @@
     function renderBoard(type) {
         if (type === 'DIARY') return renderDiary();
 
-        const posts     = window[type.toLowerCase() + 'Posts'] || [];
+        const kw        = searchQuery;
+        let   posts     = window[type.toLowerCase() + 'Posts'] || [];
         const container = document.getElementById(type.toLowerCase() + '-list');
+        const countEl   = document.getElementById(type.toLowerCase() + '-search-count');
+
+        if (kw) {
+            const kwLower = kw.toLowerCase();
+            posts = posts.filter(p => (p.content || '').toLowerCase().includes(kwLower));
+            countEl.innerText = `${posts.length} RESULT${posts.length !== 1 ? 'S' : ''} FOUND`;
+        } else {
+            countEl.innerText = '';
+        }
 
         container.innerHTML = posts.map(p => `
             <div class="post-item">
@@ -665,7 +782,7 @@
                     <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
                     <span onclick="deletePost('${type}', '${p.id}', ${JSON.stringify(p.images || [])})">DEL</span>
                 </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${linkify(p.content)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content), kw)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;">
                     ${(p.images || []).map(img =>
                         `<img src="${img}" onclick="showModal('${img}')"
@@ -678,10 +795,23 @@
 
     function renderDiary() {
         const container = document.getElementById('diary-list');
-        const posts     = window.diaryPosts || [];
+        const kw        = searchQuery;
+        let   posts     = window.diaryPosts || [];
+        const countEl   = document.getElementById('diary-search-count');
+
+        if (kw) {
+            const kwLower = kw.toLowerCase();
+            posts = posts.filter(p =>
+                (p.title || '').toLowerCase().includes(kwLower) ||
+                (p.content || '').toLowerCase().includes(kwLower)
+            );
+            countEl.innerText = `${posts.length} RESULT${posts.length !== 1 ? 'S' : ''} FOUND`;
+        } else {
+            countEl.innerText = '';
+        }
 
         if (posts.length === 0) {
-            container.innerHTML = '<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">NO ADVENTURES YET.</div>';
+            container.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
             return;
         }
 
@@ -693,7 +823,7 @@
                 <div class="diary-card" onclick="openDiaryDetail('${p.id}')">
                     <img class="diary-thumb" src="${thumb}">
                     <div class="diary-card-info">
-                        <div class="diary-card-title">${p.title}</div>
+                        <div class="diary-card-title">${highlight(p.title, kw)}</div>
                         <div class="diary-card-date">${p.date}</div>
                     </div>
                     <div class="gb-buttons">
