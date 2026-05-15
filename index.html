@@ -910,10 +910,15 @@
 
     async function processImageFile(file, previewContainerId) {
         if (!file.type.startsWith('image/')) return;
-        const blob     = await toWebP(file);
-        const preview  = await blob.arrayBuffer().then(buf =>
-            'data:image/webp;base64,' + btoa(String.fromCharCode(...new Uint8Array(buf)))
-        );
+        const blob = await toWebP(file);
+
+        // Safe base64 conversion (avoids stack overflow on large images)
+        const buf    = await blob.arrayBuffer();
+        const bytes  = new Uint8Array(buf);
+        let binary   = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const preview = 'data:image/webp;base64,' + btoa(binary);
+
         tempBlobs.push(blob);
         tempImages.push(preview);
         updatePreview(previewContainerId);
@@ -998,7 +1003,7 @@
                 }
                 inputEl.value = '';
                 if (window.fbAllPosts) delete window.fbAllPosts[type];
-                loadPosts(type, 1);
+                window.loadPosts(type, 1);
             } else {
                 const title   = document.getElementById('diaryTitleInput').value || "NO TITLE";
                 const content = document.getElementById('diaryContentInput').value;
@@ -1011,7 +1016,7 @@
                     await addDoc(collection(window.db, "DIARY"), { title, content, images: imageUrls, date, createdAt: Date.now() });
                 }
                 closeDiaryEditor();
-                loadDiary();
+                window.loadDiary();
             }
 
             tempImages = [];
@@ -1040,10 +1045,10 @@
                     } catch (e) {}
                 }
             }
-            if (type === 'DIARY') { closeDiaryDetail(); loadDiary(); }
+            if (type === 'DIARY') { closeDiaryDetail(); window.loadDiary(); }
             else {
                 if (window.fbAllPosts) delete window.fbAllPosts[type];
-                loadPosts(type, 1);
+                window.loadPosts(type, 1);
             }
         } catch (e) { console.error(e); }
     }
