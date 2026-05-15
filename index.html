@@ -665,7 +665,7 @@
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
         if (pg) pg.style.display = 'flex';
 
-        renderBoard(type);
+        window.renderBoard(type);
         renderPagination(type, page, total);
         window.scrollTo(0, 0);
     }
@@ -673,7 +673,7 @@
     function renderPagination(type, current, total) {
         const container = document.getElementById(type.toLowerCase() + '-pagination');
         container.innerHTML = Array.from({ length: total }, (_, i) => i + 1)
-            .map(i => `<span class="page-btn ${i === current ? 'active' : ''}" onclick="loadPosts('${type}', ${i})">[${i}]</span>`)
+            .map(i => `<span class="page-btn ${i === current ? 'active' : ''}" onclick="window.loadPosts('${type}', ${i})">[${i}]</span>`)
             .join('');
     }
 
@@ -682,15 +682,16 @@
         const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
         window.diaryPosts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderBoard('DIARY');
+        window.renderBoard('DIARY');
     }
 
     loadPosts('BUBBLE', 1);
     loadPosts('NEG', 1);
     loadDiary();
 
-    window.loadPosts = loadPosts;
-    window.loadDiary = loadDiary;
+    window.loadPosts      = loadPosts;
+    window.loadDiary      = loadDiary;
+    window.renderPagination = renderPagination;
 </script>
 
 <!-- App Logic -->
@@ -846,6 +847,8 @@
             `;
         }).join('');
     }
+
+    window.renderBoard = renderBoard;
 
     // ── Diary navigation ──
     function openDiaryDetail(id) {
