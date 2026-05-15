@@ -685,12 +685,26 @@
         window.renderBoard('DIARY');
     }
 
-    loadPosts('BUBBLE', 1);
-    loadPosts('NEG', 1);
-    loadDiary();
+    function waitForRenderBoard() {
+        return new Promise(resolve => {
+            if (window.renderBoard) return resolve();
+            const interval = setInterval(() => {
+                if (window.renderBoard) { clearInterval(interval); resolve(); }
+            }, 20);
+        });
+    }
 
-    window.loadPosts      = loadPosts;
-    window.loadDiary      = loadDiary;
+    async function init() {
+        await waitForRenderBoard();
+        loadPosts('BUBBLE', 1);
+        loadPosts('NEG', 1);
+        loadDiary();
+    }
+
+    init();
+
+    window.loadPosts        = loadPosts;
+    window.loadDiary        = loadDiary;
     window.renderPagination = renderPagination;
 </script>
 
@@ -910,8 +924,15 @@
 
     async function processImageFile(file, previewContainerId) {
         if (!file.type.startsWith('image/')) return;
-        const blob    = await toWebP(file);
-        const preview = URL.createObjectURL(blob);  // no base64, no size limit
+        const blob = await toWebP(file);
+
+        // Safe base64 conversion (avoids stack overflow on large images)
+        const buf    = await blob.arrayBuffer();
+        const bytes  = new Uint8Array(buf);
+        let binary   = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const preview = 'data:image/webp;base64,' + btoa(binary);
+
         tempBlobs.push(blob);
         tempImages.push(preview);
         updatePreview(previewContainerId);
@@ -1012,7 +1033,6 @@
                 window.loadDiary();
             }
 
-            tempImages.forEach(url => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); });
             tempImages = [];
             tempBlobs  = [];
             updatePreview(type.toLowerCase() + '-previews');
