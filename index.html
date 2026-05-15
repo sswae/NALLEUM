@@ -132,6 +132,12 @@
             border: 1px solid #17354d;
             padding: 15px;
             margin-bottom: 20px;
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .editor-box.drag-over {
+            border: 2px dashed #e46b22;
+            background-color: #fff8a0;
         }
 
         .post-input {
@@ -528,7 +534,7 @@
 
     <!-- BUBBLE Tab -->
     <div id="bubble-container">
-        <div class="editor-box">
+        <div class="editor-box" id="bubble-editor-box">
             <textarea id="bubble-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
             <div id="bubble-previews" class="preview-container"></div>
             <div class="editor-controls">
@@ -544,7 +550,7 @@
 
     <!-- NEG Tab -->
     <div id="neg-container" style="display:none">
-        <div class="editor-box">
+        <div class="editor-box" id="neg-editor-box">
             <textarea id="neg-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
             <div id="neg-previews" class="preview-container"></div>
             <div class="editor-controls">
@@ -588,7 +594,8 @@
     </div>
 
     <!-- Diary Editor -->
-    <div id="diary-full-editor">
+    <div id="diary-full-editor" style="display:none">
+        <div id="diary-editor-box" style="background:#fffac1; padding:15px; border:1px solid #17354d; transition: border-color 0.15s, background-color 0.15s;">
         <input type="text" id="diaryTitleInput" placeholder="제목">
         <textarea id="diaryContentInput" placeholder="내용"></textarea>
         <div id="diary-previews" class="preview-container"></div>
@@ -597,6 +604,7 @@
             <button class="btn-pixel" onclick="document.getElementById('diaryFile').click()">IMG</button>
             <button class="btn-pixel" id="diarySendBtn" onclick="savePost('DIARY')">SEND</button>
             <button class="btn-pixel" style="background:#e46b22" onclick="closeDiaryEditor()">BACK</button>
+        </div>
         </div>
     </div>
 </div>
@@ -689,7 +697,7 @@
 <script>
     // ── State ──
     let tempImages = [];
-    let tempFiles  = [];
+    let tempBlobs  = [];
     let editDiaryId = null;
     let editPostId  = null;
     let player, isPlaying = false;
@@ -871,7 +879,7 @@
         document.getElementById('diaryTitleInput').value      = '';
         document.getElementById('diaryContentInput').value    = '';
         tempImages = [];
-        tempFiles  = [];
+        tempBlobs  = [];
         updatePreview('diary-previews');
     }
 
@@ -881,17 +889,61 @@
     }
 
     // ── Image handling ──
-    function handleImg(input, type) {
-        Array.from(input.files).forEach(file => {
-            tempFiles.push(file);
-            const reader = new FileReader();
-            reader.onload = e => {
-                tempImages.push(e.target.result);
-                updatePreview(type.toLowerCase() + '-previews');
+    function toWebP(file, quality = 0.85) {
+        return new Promise(resolve => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width  = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                canvas.toBlob(blob => resolve(blob), 'image/webp', quality);
             };
-            reader.readAsDataURL(file);
+            img.src = url;
         });
     }
+
+    async function processImageFile(file, previewContainerId) {
+        if (!file.type.startsWith('image/')) return;
+        const blob     = await toWebP(file);
+        const preview  = await blob.arrayBuffer().then(buf =>
+            'data:image/webp;base64,' + btoa(String.fromCharCode(...new Uint8Array(buf)))
+        );
+        tempBlobs.push(blob);
+        tempImages.push(preview);
+        updatePreview(previewContainerId);
+    }
+
+    function handleImg(input, type) {
+        const previewId = type.toLowerCase() + '-previews';
+        Array.from(input.files).forEach(file => processImageFile(file, previewId));
+        input.value = ''; // reset so same file can be re-added
+    }
+
+    function setupDragDrop(editorBoxId, previewContainerId) {
+        const box = document.getElementById(editorBoxId);
+        if (!box) return;
+
+        box.addEventListener('dragover', e => {
+            e.preventDefault();
+            box.classList.add('drag-over');
+        });
+        box.addEventListener('dragleave', e => {
+            if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over');
+        });
+        box.addEventListener('drop', e => {
+            e.preventDefault();
+            box.classList.remove('drag-over');
+            Array.from(e.dataTransfer.files).forEach(file => processImageFile(file, previewContainerId));
+        });
+    }
+
+    // init drag-and-drop on all editor boxes
+    setupDragDrop('bubble-editor-box', 'bubble-previews');
+    setupDragDrop('neg-editor-box',    'neg-previews');
+    setupDragDrop('diary-editor-box',  'diary-previews');
 
     function updatePreview(containerId) {
         const container = document.getElementById(containerId);
@@ -906,7 +958,7 @@
 
     function removeTempImage(index, containerId) {
         tempImages.splice(index, 1);
-        tempFiles.splice(index, 1);
+        tempBlobs.splice(index, 1);
         updatePreview(containerId);
     }
 
@@ -922,11 +974,11 @@
         const { ref, uploadBytes, getDownloadURL, addDoc, collection, updateDoc, doc } = window.fbActions;
 
         try {
-            // Upload new files
+            // Upload new WebP blobs
             const imageUrls = [];
-            for (const file of tempFiles) {
-                const storageRef = ref(window.storage, `images/${Date.now()}_${file.name}`);
-                await uploadBytes(storageRef, file);
+            for (let i = 0; i < tempBlobs.length; i++) {
+                const storageRef = ref(window.storage, `images/${Date.now()}_${i}.webp`);
+                await uploadBytes(storageRef, tempBlobs[i], { contentType: 'image/webp' });
                 imageUrls.push(await getDownloadURL(storageRef));
             }
 
@@ -960,7 +1012,7 @@
             }
 
             tempImages = [];
-            tempFiles  = [];
+            tempBlobs  = [];
             updatePreview(type.toLowerCase() + '-previews');
         } catch (e) {
             console.error(e);
