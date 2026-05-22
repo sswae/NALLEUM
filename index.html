@@ -841,6 +841,7 @@
             <div class="post-item" data-id="${p.id}" data-type="${type}">
                 <div class="post-actions">
                     <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
+                    <span onclick="movePostFromEl(this)">MOVE</span>
                     <span onclick="deletePostFromEl(this)">DEL</span>
                 </div>
                 <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content), kw)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
@@ -1083,6 +1084,45 @@
     }
 
     // ── Delete post ──
+    function movePostFromEl(el) {
+        const item   = el.closest('.post-item');
+        const fromType = item.dataset.type;
+        const toType   = fromType === 'BUBBLE' ? 'NEG' : 'BUBBLE';
+        const id       = item.dataset.id;
+        const imgDiv   = item.querySelector('[data-images]');
+        const images   = imgDiv && imgDiv.dataset.images ? imgDiv.dataset.images.split(',') : [];
+
+        if (!confirm(`✂️ ${fromType} → ${toType} 로 이동하시겠습니까?`)) return;
+        movePost(fromType, toType, id, images);
+    }
+
+    async function movePost(fromType, toType, id, images) {
+        const { addDoc, collection, doc, deleteDoc } = window.fbActions;
+        const fromPosts = window[fromType.toLowerCase() + 'Posts'] || [];
+        const post      = (window.fbAllPosts?.[fromType] || fromPosts).find(p => p.id === id);
+        if (!post) return;
+
+        try {
+            await addDoc(collection(window.db, toType), {
+                content:   post.content,
+                images:    post.images || [],
+                date:      post.date,
+                createdAt: post.createdAt || Date.now()
+            });
+            await deleteDoc(doc(window.db, fromType, id));
+
+            if (window.fbAllPosts) {
+                delete window.fbAllPosts[fromType];
+                delete window.fbAllPosts[toType];
+            }
+            window.loadPosts(fromType, 1);
+            window.loadPosts(toType, 1);
+        } catch(e) {
+            console.error(e);
+            alert('이동 실패!');
+        }
+    }
+
     function deletePostFromEl(el) {
         const item   = el.closest('.post-item');
         const type   = item.dataset.type;
