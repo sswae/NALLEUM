@@ -733,9 +733,23 @@
         window.renderBoard('DIARY');
     }
 
-    loadPosts('BUBBLE', 1);
-    loadPosts('NEG', 1);
-    loadDiary();
+    function waitForRenderBoard() {
+        return new Promise(resolve => {
+            if (window.renderBoard) return resolve();
+            const iv = setInterval(() => {
+                if (window.renderBoard) { clearInterval(iv); resolve(); }
+            }, 20);
+        });
+    }
+
+    async function init() {
+        await waitForRenderBoard();
+        loadPosts('BUBBLE', 1);
+        loadPosts('NEG', 1);
+        loadDiary();
+    }
+
+    init();
 
     window.loadPosts      = loadPosts;
     window.loadDiary      = loadDiary;
