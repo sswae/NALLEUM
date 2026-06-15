@@ -381,11 +381,31 @@
             cursor: default;
         }
 
-        #imgModal img {
-            max-width: 88%;
-            max-height: 88vh;
+        #modalImgWrap {
+            width: 88vw;
+            height: 88vh;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #modalImgWrap.zoomed {
+            align-items: flex-start;
+            justify-content: flex-start;
+            cursor: grab;
+        }
+        #modalImgWrap.zoomed:active { cursor: grabbing; }
+
+        #modalImg {
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
             user-select: none;
+            display: block;
+        }
+        #modalImgWrap.zoomed #modalImg {
+            max-width: none;
+            max-height: none;
         }
 
         #modalClose {
@@ -423,6 +443,32 @@
             font-size: 9px;
             color: rgba(255,255,255,0.6);
             letter-spacing: 1px;
+        }
+
+        #modalZoomControls {
+            position: absolute;
+            bottom: 14px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Press Start 2P';
+            color: rgba(255,255,255,0.7);
+        }
+        #modalZoomControls .zoom-btn {
+            cursor: pointer;
+            padding: 4px 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            font-size: 12px;
+            user-select: none;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        #modalZoomControls .zoom-btn:hover { background: rgba(255,255,255,0.12); }
+        #modalZoomLabel {
+            font-size: 9px;
+            min-width: 38px;
+            text-align: center;
         }
 
         /* ── Misc ── */
@@ -653,9 +699,16 @@
 
 <div id="imgModal">
     <span id="modalPrev" onclick="event.stopPropagation(); modalNav(-1)">&#10094;</span>
-    <img id="modalImg" onclick="event.stopPropagation()">
+    <div id="modalImgWrap" onclick="event.stopPropagation()">
+        <img id="modalImg">
+    </div>
     <span id="modalNext" onclick="event.stopPropagation(); modalNav(1)">&#10095;</span>
     <span id="modalClose" onclick="closeModal()">&#10005;</span>
+    <div id="modalZoomControls">
+        <span class="zoom-btn" onclick="event.stopPropagation(); zoomOut()">−</span>
+        <span id="modalZoomLabel">100%</span>
+        <span class="zoom-btn" onclick="event.stopPropagation(); zoomIn()">+</span>
+    </div>
     <div id="modalCounter"></div>
 </div>
 
@@ -1199,11 +1252,16 @@
     // ── Modal ──
     let modalImages = [];
     let modalIndex  = 0;
+    let zoomLevel   = 1;
+    const ZOOM_MIN  = 1;
+    const ZOOM_MAX  = 4;
+    const ZOOM_STEP = 0.25;
 
     function showModal(src, images) {
         modalImages = images || [src];
         modalIndex  = modalImages.indexOf(src);
         if (modalIndex < 0) modalIndex = 0;
+        zoomLevel = 1;
         renderModal();
         document.getElementById('imgModal').style.display = 'flex';
     }
@@ -1218,30 +1276,72 @@
         document.getElementById('modalCounter').innerText = total > 1 ? `${modalIndex + 1} / ${total}` : '';
         document.getElementById('modalPrev').classList.toggle('hidden', total <= 1);
         document.getElementById('modalNext').classList.toggle('hidden', total <= 1);
+        applyZoom();
     }
 
     function modalNav(dir) {
         modalIndex = (modalIndex + dir + modalImages.length) % modalImages.length;
+        zoomLevel = 1; // reset zoom when switching images
         renderModal();
     }
+
+    // ── Zoom ──
+    function applyZoom() {
+        const img  = document.getElementById('modalImg');
+        const wrap = document.getElementById('modalImgWrap');
+
+        if (zoomLevel <= 1) {
+            zoomLevel = 1;
+            img.style.width  = '';
+            img.style.height = '';
+            wrap.classList.remove('zoomed');
+            wrap.scrollTop  = 0;
+            wrap.scrollLeft = 0;
+        } else {
+            img.style.width  = (zoomLevel * 100) + '%';
+            img.style.height = (zoomLevel * 100) + '%';
+            wrap.classList.add('zoomed');
+        }
+        document.getElementById('modalZoomLabel').innerText = Math.round(zoomLevel * 100) + '%';
+    }
+
+    function zoomIn()    { zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP); applyZoom(); }
+    function zoomOut()   { zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP); applyZoom(); }
+    function zoomReset() { zoomLevel = 1; applyZoom(); }
 
     // click backdrop to close
     document.getElementById('imgModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
 
-    // keyboard navigation
+    // keyboard navigation + zoom shortcuts
     document.addEventListener('keydown', e => {
         if (document.getElementById('imgModal').style.display !== 'flex') return;
-        if (e.key === 'ArrowLeft')  modalNav(-1);
-        if (e.key === 'ArrowRight') modalNav(1);
-        if (e.key === 'Escape')     closeModal();
+
+        // Ctrl/Cmd + (+/-/0) → zoom in/out/reset
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomIn(); return; }
+            if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomOut(); return; }
+            if (e.key === '0') { e.preventDefault(); zoomReset(); return; }
+        }
+
+        if (e.key === 'ArrowLeft'  && zoomLevel === 1) modalNav(-1);
+        if (e.key === 'ArrowRight' && zoomLevel === 1) modalNav(1);
+        if (e.key === 'Escape') closeModal();
     });
 
-    // swipe support
+    // ctrl + wheel to zoom
+    document.getElementById('imgModal').addEventListener('wheel', e => {
+        if (!(e.ctrlKey || e.metaKey)) return;
+        e.preventDefault();
+        if (e.deltaY < 0) zoomIn(); else zoomOut();
+    }, { passive: false });
+
+    // swipe support (only when not zoomed, to avoid conflicting with panning)
     let touchStartX = 0;
     document.getElementById('imgModal').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
     document.getElementById('imgModal').addEventListener('touchend',   e => {
+        if (zoomLevel > 1) return;
         const dx = e.changedTouches[0].clientX - touchStartX;
         if (Math.abs(dx) > 50) modalNav(dx < 0 ? 1 : -1);
     });
