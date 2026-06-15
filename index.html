@@ -1254,8 +1254,8 @@
     let modalIndex  = 0;
     let zoomLevel   = 1;
     const ZOOM_MIN  = 1;
-    const ZOOM_MAX  = 4;
-    const ZOOM_STEP = 0.25;
+    const ZOOM_MAX  = 40;   // 4000% — enough to view ~30,000px-tall images near native resolution
+    const ZOOM_STEP = 1;    // 100% per step
 
     function showModal(src, images) {
         modalImages = images || [src];
