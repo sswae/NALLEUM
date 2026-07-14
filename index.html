@@ -558,6 +558,37 @@
             padding: 0 1px;
         }
 
+        /* ── Arcade Loading / Error Text ── */
+        .bounce-letter {
+            display: inline-block;
+            animation: letterBounce 1s ease-in-out infinite;
+        }
+        @keyframes letterBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        .fail-flicker {
+            display: inline-block;
+            animation: failFlicker 1s steps(2, start) infinite;
+        }
+        @keyframes failFlicker {
+            0%, 100% { opacity: 1; color: #fffac1; }
+            50%      { opacity: 0.35; color: #e46b22; }
+        }
+
+        .retry-link {
+            display: inline-block;
+            text-decoration: underline;
+            cursor: pointer;
+            color: #f8cf39;
+            animation: retryPulse 1.4s ease-in-out infinite;
+        }
+        @keyframes retryPulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.12); }
+        }
+
         /* ── Animations ── */
         @keyframes spin {
             from { transform: rotate(0deg); }
@@ -748,6 +779,24 @@
     // ── Pagination state ──
     const POSTS_PER_PAGE = 20;
 
+    // ── Arcade text helpers ──
+    function bouncyText(text) {
+        return text.split('').map((ch, i) =>
+            `<span class="bounce-letter" style="animation-delay:${(i * 0.07).toFixed(2)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`
+        ).join('');
+    }
+
+    function loadingHTML() {
+        return `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
+    }
+
+    function failHTML(retryOnclick) {
+        return `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
+            <span class="fail-flicker">${bouncyText('LOAD FAILED.')}</span><br><br>
+            <span class="retry-link" onclick="${retryOnclick}">&#8635; RETRY</span>
+        </div>`;
+    }
+
     // Fetches with automatic retry — helps when Firestore momentarily returns
     // an empty snapshot due to a flaky network / offline-cache fallback.
     async function fetchPostsWithRetry(type, attempts = 3) {
@@ -756,16 +805,15 @@
                 const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
                 const result = await getDocs(q);
                 const docs   = result.docs.map(d => ({ id: d.id, ...d.data() }));
-                // If we got results, or this is a collection that's genuinely
-                // empty after all attempts, accept it.
-                if (docs.length > 0 || i === attempts - 1) return docs;
+                if (docs.length > 0) return docs;
+                if (i === attempts - 1) return { empty: true, docs: [] };
             } catch (e) {
                 console.error(`fetch ${type} attempt ${i + 1} failed`, e);
                 if (i === attempts - 1) throw e;
             }
             await new Promise(r => setTimeout(r, 500 * (i + 1))); // backoff
         }
-        return [];
+        return { empty: true, docs: [] };
     }
 
     async function loadPosts(type, page = 1) {
@@ -773,20 +821,25 @@
 
         if (page === 1 || !window.fbAllPosts[type]) {
             const listEl = document.getElementById(type.toLowerCase() + '-list');
-            if (listEl && (!window.fbAllPosts[type])) {
-                listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
-            }
+            if (listEl) listEl.innerHTML = loadingHTML();
+
+            let result;
             try {
-                window.fbAllPosts[type] = await fetchPostsWithRetry(type);
+                result = await fetchPostsWithRetry(type);
             } catch (e) {
-                if (listEl) {
-                    listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
-                        LOAD FAILED.<br><br>
-                        <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.fbAllPosts['${type}']=null; window.loadPosts('${type}',1)">↻ RETRY</span>
-                    </div>`;
-                }
+                if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',1)`);
                 return;
             }
+
+            // Still empty after retries: treat as a soft failure too — surface
+            // a retry option rather than silently showing nothing, since we
+            // can't distinguish "genuinely no posts" from a flaky fetch.
+            if (result && result.empty && !window.fbAllPosts[type]) {
+                if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',1)`);
+                return;
+            }
+
+            window.fbAllPosts[type] = Array.isArray(result) ? result : result.docs;
         }
 
         const all   = window.fbAllPosts[type];
