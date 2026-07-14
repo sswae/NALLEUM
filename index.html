@@ -748,13 +748,45 @@
     // ── Pagination state ──
     const POSTS_PER_PAGE = 20;
 
+    // Fetches with automatic retry — helps when Firestore momentarily returns
+    // an empty snapshot due to a flaky network / offline-cache fallback.
+    async function fetchPostsWithRetry(type, attempts = 3) {
+        for (let i = 0; i < attempts; i++) {
+            try {
+                const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
+                const result = await getDocs(q);
+                const docs   = result.docs.map(d => ({ id: d.id, ...d.data() }));
+                // If we got results, or this is a collection that's genuinely
+                // empty after all attempts, accept it.
+                if (docs.length > 0 || i === attempts - 1) return docs;
+            } catch (e) {
+                console.error(`fetch ${type} attempt ${i + 1} failed`, e);
+                if (i === attempts - 1) throw e;
+            }
+            await new Promise(r => setTimeout(r, 500 * (i + 1))); // backoff
+        }
+        return [];
+    }
+
     async function loadPosts(type, page = 1) {
-        // Fetch all docs once and cache in fbAllPosts
         if (!window.fbAllPosts) window.fbAllPosts = {};
+
         if (page === 1 || !window.fbAllPosts[type]) {
-            const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
-            const result = await getDocs(q);
-            window.fbAllPosts[type] = result.docs.map(d => ({ id: d.id, ...d.data() }));
+            const listEl = document.getElementById(type.toLowerCase() + '-list');
+            if (listEl && (!window.fbAllPosts[type])) {
+                listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
+            }
+            try {
+                window.fbAllPosts[type] = await fetchPostsWithRetry(type);
+            } catch (e) {
+                if (listEl) {
+                    listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
+                        LOAD FAILED.<br><br>
+                        <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.fbAllPosts['${type}']=null; window.loadPosts('${type}',1)">↻ RETRY</span>
+                    </div>`;
+                }
+                return;
+            }
         }
 
         const all   = window.fbAllPosts[type];
@@ -779,10 +811,26 @@
     }
 
     async function loadDiary() {
-        const { getDocs, collection, query, orderBy } = window.fbActions;
-        const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
-        window.diaryPosts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const listEl = document.getElementById('diary-list');
+        if (!window.diaryPosts) {
+            listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
+        }
+        try {
+            for (let i = 0; i < 3; i++) {
+                const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
+                const snap = await getDocs(q);
+                const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                if (docs.length > 0 || i === 2) { window.diaryPosts = docs; break; }
+                await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            }
+        } catch (e) {
+            console.error('loadDiary failed', e);
+            listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
+                LOAD FAILED.<br><br>
+                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary()">↻ RETRY</span>
+            </div>`;
+            return;
+        }
         window.renderBoard('DIARY');
     }
 
