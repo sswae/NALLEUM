@@ -788,7 +788,7 @@
     function failHTML(retryOnclick) {
         return `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
             <span class="fail-flicker">${bouncyText('LOAD FAILED.')}</span><br><br>
-            <span class="retry-link" onclick="${retryOnclick}">💣RETRY</span>
+            <span class="retry-link" onclick="${retryOnclick}">💣 RETRY</span>
         </div>`;
     }
 
@@ -875,7 +875,7 @@
             console.error('loadDiary failed', e);
             listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
                 LOAD FAILED.<br><br>
-                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary()">💣RETRY</span>
+                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary()">💣 RETRY</span>
             </div>`;
             return;
         }
