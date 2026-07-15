@@ -487,9 +487,11 @@
         .pagination {
             display: flex;
             justify-content: center;
-            gap: 10px;
+            align-items: center;
+            gap: 8px;
             margin-top: 20px;
             padding-bottom: 20px;
+            flex-wrap: wrap;
         }
 
         .page-btn {
@@ -498,10 +500,31 @@
             font-family: 'Press Start 2P';
             font-size: 10px;
             transition: transform 0.08s ease;
+            padding: 2px 3px;
         }
 
         .page-btn:active { transform: scale(0.9); }
         .page-btn.active { color: #e46b22; text-decoration: underline; }
+
+        .page-ellipsis {
+            color: #fffac1;
+            opacity: 0.5;
+            font-family: 'Press Start 2P';
+            font-size: 10px;
+        }
+
+        .page-nav {
+            cursor: pointer;
+            color: #fffac1;
+            font-family: 'Press Start 2P';
+            font-size: 9px;
+            opacity: 0.75;
+            transition: opacity 0.15s, transform 0.08s ease;
+            padding: 2px 4px;
+        }
+        .page-nav:hover { opacity: 1; }
+        .page-nav:active { transform: scale(0.9); }
+        .page-nav.disabled { opacity: 0.2; pointer-events: none; }
 
         /* ── Global Search Bar ── */
         .global-search-bar {
@@ -853,9 +876,32 @@
 
     function renderPagination(type, current, total) {
         const container = document.getElementById(type.toLowerCase() + '-pagination');
-        container.innerHTML = Array.from({ length: total }, (_, i) => i + 1)
-            .map(i => `<span class="page-btn ${i === current ? 'active' : ''}" onclick="window.loadPosts('${type}', ${i})">[${i}]</span>`)
-            .join('');
+
+        // Build page number list: always show first, last, current ±1,
+        // collapse the rest into "…"
+        const pages = [];
+        for (let i = 1; i <= total; i++) {
+            if (i === 1 || i === total || Math.abs(i - current) <= 1) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== '…') {
+                pages.push('…');
+            }
+        }
+
+        const prevDisabled = current <= 1 ? 'disabled' : '';
+        const nextDisabled = current >= total ? 'disabled' : '';
+
+        const numberHtml = pages.map(p =>
+            p === '…'
+                ? `<span class="page-ellipsis">···</span>`
+                : `<span class="page-btn ${p === current ? 'active' : ''}" onclick="window.loadPosts('${type}', ${p})">${p}</span>`
+        ).join('');
+
+        container.innerHTML = `
+            <span class="page-nav ${prevDisabled}" onclick="window.loadPosts('${type}', ${current - 1})">&#10094; PREV</span>
+            ${numberHtml}
+            <span class="page-nav ${nextDisabled}" onclick="window.loadPosts('${type}', ${current + 1})">NEXT &#10095;</span>
+        `;
     }
 
     async function loadDiary() {
