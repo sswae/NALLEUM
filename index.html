@@ -487,11 +487,9 @@
         .pagination {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 8px;
+            gap: 10px;
             margin-top: 20px;
             padding-bottom: 20px;
-            flex-wrap: wrap;
         }
 
         .page-btn {
@@ -500,31 +498,10 @@
             font-family: 'Press Start 2P';
             font-size: 10px;
             transition: transform 0.08s ease;
-            padding: 2px 3px;
         }
 
         .page-btn:active { transform: scale(0.9); }
         .page-btn.active { color: #e46b22; text-decoration: underline; }
-
-        .page-ellipsis {
-            color: #fffac1;
-            opacity: 0.5;
-            font-family: 'Press Start 2P';
-            font-size: 10px;
-        }
-
-        .page-nav {
-            cursor: pointer;
-            color: #fffac1;
-            font-family: 'Press Start 2P';
-            font-size: 9px;
-            opacity: 0.75;
-            transition: opacity 0.15s, transform 0.08s ease;
-            padding: 2px 4px;
-        }
-        .page-nav:hover { opacity: 1; }
-        .page-nav:active { transform: scale(0.9); }
-        .page-nav.disabled { opacity: 0.2; pointer-events: none; }
 
         /* ── Global Search Bar ── */
         .global-search-bar {
@@ -579,6 +556,32 @@
             color: #17354d;
             border-radius: 2px;
             padding: 0 1px;
+        }
+
+        .filter-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .img-filter-btn {
+            background: none;
+            border: 1px solid #17354d;
+            border-radius: 14px;
+            padding: 5px 10px;
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            color: #17354d;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
+        }
+        .img-filter-btn:hover { opacity: 0.9; }
+        .img-filter-btn:active { transform: scale(0.94); }
+        .img-filter-btn.active {
+            background-color: #17354d;
+            color: #fffac1;
+            opacity: 1;
         }
 
         /* ── Arcade Loading / Error Text ── */
@@ -680,6 +683,9 @@
                 <button id="bubbleSendBtn" class="btn-pixel" onclick="savePost('BUBBLE')">SEND</button>
             </div>
         </div>
+        <div class="filter-bar">
+            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🖼 IMG ONLY</span>
+        </div>
         <div class="search-count" id="bubble-search-count"></div>
         <div id="bubble-list"></div>
         <div id="bubble-pagination" class="pagination"></div>
@@ -695,6 +701,9 @@
                 <button class="btn-pixel" onclick="document.getElementById('negFile').click()">IMG</button>
                 <button id="negSendBtn" class="btn-pixel" onclick="savePost('NEG')">SEND</button>
             </div>
+        </div>
+        <div class="filter-bar">
+            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🖼 IMG ONLY</span>
         </div>
         <div class="search-count" id="neg-search-count"></div>
         <div id="neg-list"></div>
@@ -876,32 +885,9 @@
 
     function renderPagination(type, current, total) {
         const container = document.getElementById(type.toLowerCase() + '-pagination');
-
-        // Build page number list: always show first, last, current ±1,
-        // collapse the rest into "…"
-        const pages = [];
-        for (let i = 1; i <= total; i++) {
-            if (i === 1 || i === total || Math.abs(i - current) <= 1) {
-                pages.push(i);
-            } else if (pages[pages.length - 1] !== '…') {
-                pages.push('…');
-            }
-        }
-
-        const prevDisabled = current <= 1 ? 'disabled' : '';
-        const nextDisabled = current >= total ? 'disabled' : '';
-
-        const numberHtml = pages.map(p =>
-            p === '…'
-                ? `<span class="page-ellipsis">···</span>`
-                : `<span class="page-btn ${p === current ? 'active' : ''}" onclick="window.loadPosts('${type}', ${p})">${p}</span>`
-        ).join('');
-
-        container.innerHTML = `
-            <span class="page-nav ${prevDisabled}" onclick="window.loadPosts('${type}', ${current - 1})">&#10094; PREV</span>
-            ${numberHtml}
-            <span class="page-nav ${nextDisabled}" onclick="window.loadPosts('${type}', ${current + 1})">NEXT &#10095;</span>
-        `;
+        container.innerHTML = Array.from({ length: total }, (_, i) => i + 1)
+            .map(i => `<span class="page-btn ${i === current ? 'active' : ''}" onclick="window.loadPosts('${type}', ${i})">[${i}]</span>`)
+            .join('');
     }
 
     async function loadDiary() {
@@ -983,6 +969,17 @@
 
     // ── Search ──
     let searchQuery = '';
+    const imgFilter = { BUBBLE: false, NEG: false };
+
+    function toggleImgFilter(type) {
+        imgFilter[type] = !imgFilter[type];
+        document.getElementById(type.toLowerCase() + '-img-filter').classList.toggle('active', imgFilter[type]);
+
+        const pg = document.getElementById(type.toLowerCase() + '-pagination');
+        if (pg) pg.style.display = (imgFilter[type] || searchQuery) ? 'none' : 'flex';
+
+        renderBoard(type);
+    }
 
     function onSearch() {
         searchQuery = document.getElementById('global-search').value.trim();
@@ -990,7 +987,7 @@
 
         ['bubble', 'neg'].forEach(t => {
             const pg = document.getElementById(t + '-pagination');
-            if (pg) pg.style.display = searchQuery ? 'none' : 'flex';
+            if (pg) pg.style.display = (searchQuery || imgFilter[t.toUpperCase()]) ? 'none' : 'flex';
         });
 
         renderBoard('BUBBLE');
@@ -1008,9 +1005,12 @@
         });
         const dc = document.getElementById('diary-search-count');
         if (dc) dc.innerText = '';
-        // reload page 1 to restore paginated view + pagination buttons
-        window.loadPosts('BUBBLE', 1);
-        window.loadPosts('NEG', 1);
+
+        // if img filter is active for a board, just re-render (no need to reload from server)
+        ['BUBBLE', 'NEG'].forEach(t => {
+            if (imgFilter[t]) renderBoard(t);
+            else window.loadPosts(t, 1);
+        });
         renderBoard('DIARY');
     }
 
@@ -1029,21 +1029,36 @@
     function renderBoard(type) {
         if (type === 'DIARY') return renderDiary();
 
-        const kw        = searchQuery;
-        const container = document.getElementById(type.toLowerCase() + '-list');
-        const countEl   = document.getElementById(type.toLowerCase() + '-search-count');
+        const kw          = searchQuery;
+        const onlyImages  = imgFilter[type];
+        const container   = document.getElementById(type.toLowerCase() + '-list');
+        const countEl      = document.getElementById(type.toLowerCase() + '-search-count');
 
-        // When searching, use full cache; otherwise use current page slice
-        let posts = kw
+        // When searching or filtering, use full cache; otherwise use current page slice
+        let posts = (kw || onlyImages)
             ? (window.fbAllPosts && window.fbAllPosts[type] || [])
             : (window[type.toLowerCase() + 'Posts'] || []);
+
+        if (onlyImages) {
+            posts = posts.filter(p => (p.images || []).length > 0);
+        }
 
         if (kw) {
             const kwLower = kw.toLowerCase();
             posts = posts.filter(p => (p.content || '').toLowerCase().includes(kwLower));
+        }
+
+        if (kw || onlyImages) {
             if (countEl) countEl.innerText = `${posts.length} RESULT${posts.length !== 1 ? 'S' : ''} FOUND`;
         } else {
             if (countEl) countEl.innerText = '';
+        }
+
+        if (posts.length === 0 && (kw || onlyImages)) {
+            container.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
+                ${onlyImages && !kw ? 'NO IMAGE POSTS.' : 'NO RESULTS.'}
+            </div>`;
+            return;
         }
 
         container.innerHTML = posts.map(p => `
