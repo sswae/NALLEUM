@@ -205,32 +205,15 @@
 
         .post-item > div:nth-child(2) { white-space: pre-wrap; word-break: break-all; }
 
-        .post-actions-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
         .post-actions {
+            align-self: flex-end;
             display: flex;
-            align-items: center;
             gap: 8px;
             font-size: 7px;
             color: #fffac1;
             cursor: pointer;
+            margin-bottom: 5px;
         }
-
-        .comment-toggle {
-            display: flex;
-            align-items: center;
-            font-size: 7px;
-            color: #fffac1;
-            cursor: pointer;
-            transition: transform 0.08s ease;
-            line-height: 1;
-        }
-        .comment-toggle:active { transform: scale(0.92); }
 
         /* ── Diary Cards ── */
         .diary-card {
@@ -624,84 +607,6 @@
             opacity: 1;
         }
 
-        /* ── Comments ── */
-        .comment-section {
-            display: none;
-            margin-top: 10px;
-            padding: 10px 12px;
-            background: rgba(23, 53, 77, 0.08);
-            border-left: 2px solid #17354d;
-        }
-        .comment-section.open { display: block; }
-
-        .comment-item {
-            font-family: sans-serif;
-            font-size: 12px;
-            color: #17354d;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(23, 53, 77, 0.15);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-        .comment-item:last-of-type { border-bottom: none; }
-
-        .comment-item-body { flex: 1; word-break: break-all; }
-        .comment-item-date {
-            font-family: 'Press Start 2P';
-            font-size: 7px;
-            color: #3b74a7;
-            display: block;
-            margin-top: 3px;
-        }
-        .comment-del {
-            font-family: 'Press Start 2P';
-            font-size: 7px;
-            color: #e46b22;
-            cursor: pointer;
-            opacity: 0.6;
-            flex-shrink: 0;
-        }
-        .comment-del:hover { opacity: 1; }
-
-        .comment-empty {
-            font-family: sans-serif;
-            font-size: 12px;
-            color: #17354d;
-            opacity: 0.5;
-            padding: 6px 0;
-        }
-
-        .comment-input-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 8px;
-        }
-        .comment-input {
-            flex: 1;
-            background: #fffac1;
-            border: 1px solid #17354d;
-            padding: 6px 8px;
-            font-family: sans-serif;
-            font-size: 12px;
-            outline: none;
-            color: #17354d;
-        }
-        .comment-send-btn {
-            background-color: #1a2a3a;
-            color: #fffac1;
-            border: none;
-            border-bottom: 3px solid #000;
-            padding: 6px 10px;
-            border-radius: 12px;
-            font-size: 8px;
-            cursor: pointer;
-            font-family: 'Press Start 2P';
-            transition: transform 0.08s ease, border-bottom-width 0.08s ease;
-        }
-        .comment-send-btn:active { transform: translateY(2px); border-bottom-width: 1px; }
-
         /* ── Arcade Loading / Error Text ── */
         .bounce-letter {
             display: inline-block;
@@ -852,10 +757,6 @@
         </div>
         <div id="detailImages"  class="detail-images"></div>
         <div id="detailContent" class="detail-content"></div>
-        <div class="post-actions-row" style="justify-content:flex-start; margin-bottom:15px;">
-            <span class="comment-toggle" onclick="toggleComments(this)">💬 COMMENTS</span>
-        </div>
-        <div class="comment-section" id="detailCommentSection" data-id="" data-type="DIARY"></div>
         <div class="editor-controls">
             <button class="btn-pixel" style="background:#e46b22" onclick="closeDiaryDetail()">CLOSE</button>
         </div>
@@ -1010,7 +911,7 @@
 
         const pages = [];
         for (let i = 1; i <= total; i++) {
-            if (i === 1 || i === total || Math.abs(i - current) <= 1) {
+            if (i === 1 || i === total || Math.abs(i - current) <= 2) {
                 pages.push(i);
             } else if (pages[pages.length - 1] !== '…') {
                 pages.push('…');
@@ -1206,13 +1107,10 @@
 
         container.innerHTML = posts.map(p => `
             <div class="post-item" data-id="${p.id}" data-type="${type}">
-                <div class="post-actions-row">
-                    <span class="comment-toggle" onclick="toggleComments(this)">💬 COMMENTS</span>
-                    <div class="post-actions">
-                        <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
-                        <span onclick="movePostFromEl(this)">MOVE</span>
-                        <span onclick="deletePostFromEl(this)">DEL</span>
-                    </div>
+                <div class="post-actions">
+                    <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
+                    <span onclick="movePostFromEl(this)">MOVE</span>
+                    <span onclick="deletePostFromEl(this)">DEL</span>
                 </div>
                 <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content), kw)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"
@@ -1222,7 +1120,6 @@
                               style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`
                     ).join('')}
                 </div>
-                <div class="comment-section"></div>
             </div>
         `).join('');
     }
@@ -1288,13 +1185,6 @@
         document.getElementById('detailEditBtn').onclick = () => startEditDiary(post.id);
         document.getElementById('detailDelBtn').onclick  = () => deletePost('DIARY', post.id, post.images);
 
-        // reset comment section for the newly opened post
-        const cSection = document.getElementById('detailCommentSection');
-        cSection.dataset.id = post.id;
-        cSection.classList.remove('open');
-        cSection.innerHTML = '';
-        cSection.dataset.loaded = '';
-
         window.scrollTo(0, 0);
     }
 
@@ -1341,15 +1231,8 @@
 
     async function processImageFile(file, previewContainerId) {
         if (!file.type.startsWith('image/')) return;
-        const blob = await toWebP(file);
-
-        // Safe base64 conversion (avoids stack overflow on large images)
-        const buf    = await blob.arrayBuffer();
-        const bytes  = new Uint8Array(buf);
-        let binary   = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const preview = 'data:image/webp;base64,' + btoa(binary);
-
+        const blob    = await toWebP(file);
+        const preview = URL.createObjectURL(blob);  // no base64, no size limit
         tempBlobs.push(blob);
         tempImages.push(preview);
         updatePreview(previewContainerId);
@@ -1450,6 +1333,7 @@
                 window.loadDiary();
             }
 
+            tempImages.forEach(url => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); });
             tempImages = [];
             tempBlobs  = [];
             updatePreview(type.toLowerCase() + '-previews');
@@ -1499,135 +1383,6 @@
         } catch(e) {
             console.error(e);
             alert('이동 실패!');
-        }
-    }
-
-    // ── Comments ──
-    async function toggleComments(el) {
-        const item = el.closest('.post-item');
-        let section, type, id;
-
-        if (item) {
-            section = item.querySelector('.comment-section');
-            type    = item.dataset.type;
-            id      = item.dataset.id;
-        } else {
-            // diary detail view case
-            section = document.getElementById('detailCommentSection');
-            type    = section.dataset.type;
-            id      = section.dataset.id;
-        }
-
-        const isOpen = section.classList.contains('open');
-        if (isOpen) {
-            section.classList.remove('open');
-            return;
-        }
-        section.classList.add('open');
-
-        if (!section.dataset.loaded) {
-            section.innerHTML = `<div class="comment-empty">${bouncyText('LOADING...')}</div>`;
-            await loadCommentsInto(section, type, id);
-            section.dataset.loaded = '1';
-        }
-    }
-
-    async function loadCommentsInto(section, type, id) {
-        const { getDocs, collection, query, orderBy } = window.fbActions;
-        try {
-            const q    = query(collection(window.db, type, id, 'comments'), orderBy("createdAt", "asc"));
-            const snap = await getDocs(q);
-            const comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            renderCommentSection(section, type, id, comments);
-        } catch (e) {
-            console.error('comment load failed', e);
-            section.innerHTML = `<div class="comment-empty">불러오기 실패 😢</div>` +
-                commentInputRowHtml(type, id);
-            bindCommentInput(section, type, id);
-        }
-    }
-
-    function commentInputRowHtml() {
-        return `
-            <div class="comment-input-row">
-                <input type="text" class="comment-input" placeholder="댓글을 입력하세요..." maxlength="300">
-                <button class="comment-send-btn">SEND</button>
-            </div>
-        `;
-    }
-
-    function bindCommentInput(section, type, id) {
-        const input = section.querySelector('.comment-input');
-        const btn   = section.querySelector('.comment-send-btn');
-        const send  = () => addComment(section, type, id, input);
-        btn.onclick = send;
-        input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
-    }
-
-    function renderCommentSection(section, type, id, comments) {
-        const list = comments.length
-            ? comments.map(c => `
-                <div class="comment-item" data-comment-id="${c.id}">
-                    <div class="comment-item-body">
-                        ${linkify((c.content || '').replace(/</g,'&lt;'))}
-                        <span class="comment-item-date">${c.date || ''}</span>
-                    </div>
-                    <span class="comment-del" onclick="deleteComment('${type}', '${id}', '${c.id}', this)">DEL</span>
-                </div>
-            `).join('')
-            : `<div class="comment-empty">아직 댓글이 없어요</div>`;
-
-        section.innerHTML = list + commentInputRowHtml();
-        bindCommentInput(section, type, id);
-
-        // update toggle label with count on BUBBLE/NEG cards
-        const item = section.closest('.post-item');
-        if (item) {
-            const toggle = item.querySelector('.comment-toggle');
-            if (toggle) toggle.innerText = `💬 ${comments.length}`;
-        }
-    }
-
-    async function addComment(section, type, id, inputEl) {
-        const content = inputEl.value.trim();
-        if (!content) return;
-
-        const { addDoc, collection } = window.fbActions;
-        const now  = new Date();
-        const date = `[${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}]`;
-
-        const btn = section.querySelector('.comment-send-btn');
-        btn.disabled = true;
-        btn.innerText = '...';
-
-        try {
-            await addDoc(collection(window.db, type, id, 'comments'), {
-                content, date, createdAt: Date.now()
-            });
-            inputEl.value = '';
-            section.dataset.loaded = '';
-            await loadCommentsInto(section, type, id);
-            section.dataset.loaded = '1';
-        } catch (e) {
-            console.error('add comment failed', e);
-            alert('댓글 작성 실패!');
-            btn.disabled = false;
-            btn.innerText = 'SEND';
-        }
-    }
-
-    async function deleteComment(type, id, commentId, el) {
-        if (!confirm('✂️ 댓글을 삭제하시겠습니까?')) return;
-        const { doc, deleteDoc } = window.fbActions;
-        try {
-            await deleteDoc(doc(window.db, type, id, 'comments', commentId));
-            const section = el.closest('.comment-section');
-            section.dataset.loaded = '';
-            await loadCommentsInto(section, type, id);
-            section.dataset.loaded = '1';
-        } catch (e) {
-            console.error('delete comment failed', e);
-            alert('댓글 삭제 실패!');
         }
     }
 
@@ -1829,21 +1584,6 @@
                     imgFolder.file(fileName, blob);
                     md += `![img](images/${fileName})\n`;
                 }
-            }
-
-            // include comments, nested under the original post, oldest first
-            try {
-                const cq    = query(collection(window.db, "BUBBLE", d.id, "comments"), orderBy("createdAt", "asc"));
-                const cSnap = await getDocs(cq);
-                if (!cSnap.empty) {
-                    md += `\n**댓글 (${cSnap.docs.length})**\n`;
-                    cSnap.docs.forEach(c => {
-                        const cd = c.data();
-                        md += `> ${cd.date || ''} ${cd.content}\n`;
-                    });
-                }
-            } catch (e) {
-                console.error('backup: comment fetch failed for', d.id, e);
             }
 
             md += "\n---\n\n";
