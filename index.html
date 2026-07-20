@@ -780,8 +780,8 @@
 
 <div id="imgModal">
     <span id="modalPrev" onclick="event.stopPropagation(); modalNav(-1)">&#10094;</span>
-    <div id="modalImgWrap" onclick="event.stopPropagation()">
-        <img id="modalImg">
+    <div id="modalImgWrap">
+        <img id="modalImg" onclick="event.stopPropagation()">
     </div>
     <span id="modalNext" onclick="event.stopPropagation(); modalNav(1)">&#10095;</span>
     <span id="modalClose" onclick="closeModal()">&#10005;</span>
@@ -1508,6 +1508,12 @@
     // click backdrop to close
     document.getElementById('imgModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
+    });
+
+    // click empty space around the image (inside the wrap) to close too —
+    // skip while zoomed, since that area is used for panning/scrolling
+    document.getElementById('modalImgWrap').addEventListener('click', function(e) {
+        if (e.target === this && zoomLevel <= 1) closeModal();
     });
 
     // keyboard navigation + zoom shortcuts
