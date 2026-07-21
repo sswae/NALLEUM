@@ -10,52 +10,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
-        /* ── Color Palette ── */
-        :root {
-            --c-bg: #78a2b9;
-            --c-ink: #17354d;
-            --c-paper: #fffac1;
-            --c-btn-bg: #1a2a3a;
-            --c-accent: #e46b22;
-            --c-card: #3b74a7;
-            --c-card-light: #5a8fb1;
-            --c-highlight: #f8cf39;
-            --c-font: 'Press Start 2P', cursive;
-            --c-bg-pattern: none;
-        }
-
-        /* ── Move Popup ── */
-        .move-popup {
-            position: absolute;
-            z-index: 2000;
-            background: var(--c-paper);
-            border: 1px solid var(--c-ink);
-            border-bottom-width: 3px;
-            display: flex;
-            flex-direction: column;
-            min-width: 70px;
-        }
-        .move-popup-option {
-            padding: 6px 10px;
-            font-family: var(--c-font);
-            font-size: 8px;
-            color: var(--c-ink);
-            cursor: pointer;
-        }
-        .move-popup-option:hover { background: var(--c-highlight); }
-        .move-popup-option + .move-popup-option { border-top: 1px solid rgba(0,0,0,0.15); }
-
         /* ── Reset & Base ── */
         * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
 
         body {
-            background-color: var(--c-bg);
-            background-image: var(--c-bg-pattern);
-            font-family: var(--c-font);
+            background-color: #78a2b9;
+            font-family: 'Press Start 2P', cursive;
             margin: 0;
             display: flex;
             justify-content: center;
-            transition: background-color 0.25s ease;
         }
 
         #app {
@@ -70,7 +33,7 @@
         #loading-screen {
             position: fixed;
             inset: 0;
-            background-color: var(--c-ink);
+            background-color: #17354d;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -91,7 +54,7 @@
 
         h1 {
             font-size: 28px;
-            color: var(--c-ink);
+            color: #17354d;
             letter-spacing: 2px;
             margin-top: 50px;
             margin-bottom: 60px;
@@ -108,47 +71,47 @@
 
         .tab-btn {
             background: none;
-            border: 2px solid var(--c-ink);
+            border: 2px solid #17354d;
             border-radius: 20px;
             padding: 8px 15px;
             font-family: inherit;
             font-size: 11px;
             cursor: pointer;
-            color: var(--c-ink);
+            color: #17354d;
             transition: transform 0.08s ease, background-color 0.1s;
         }
 
-        .tab-btn.active { background-color: var(--c-paper); }
+        .tab-btn.active { background-color: #fffac1; }
 
         /* ── Music Button ── */
         .music-btn {
             background: none;
-            border: 2px solid var(--c-ink);
+            border: 2px solid #17354d;
             border-radius: 20px;
             padding: 5px 10px;
             font-family: inherit;
             font-size: 9px;
             cursor: pointer;
-            color: var(--c-ink);
+            color: #17354d;
             transition: transform 0.08s ease, background-color 0.1s;
         }
 
         .music-btn.playing {
-            background-color: var(--c-accent);
-            color: var(--c-paper);
+            background-color: #e46b22;
+            color: #fffac1;
         }
 
         /* ── Pixel Buttons (shared press effect) ── */
         .btn-pixel {
-            background-color: var(--c-btn-bg);
-            color: var(--c-paper);
+            background-color: #1a2a3a;
+            color: #fffac1;
             border: 2px solid #000;
             border-bottom-width: 4px;
             padding: 8px 15px;
             border-radius: 20px;
             font-size: 10px;
             cursor: pointer;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             transition: transform 0.08s ease, border-bottom-width 0.08s ease;
         }
 
@@ -165,15 +128,15 @@
 
         /* ── Editor Box ── */
         .editor-box {
-            background-color: var(--c-paper);
-            border: 1px solid var(--c-ink);
+            background-color: #fffac1;
+            border: 1px solid #17354d;
             padding: 15px;
             margin-bottom: 20px;
             transition: border-color 0.15s, background-color 0.15s;
         }
 
         .editor-box.drag-over {
-            border: 2px dashed var(--c-accent);
+            border: 2px dashed #e46b22;
             background-color: #fff8a0;
         }
 
@@ -186,7 +149,7 @@
             font-size: 14px;
             outline: none;
             min-height: 100px;
-            color: var(--c-ink);
+            color: #17354d;
         }
 
         .editor-controls {
@@ -208,7 +171,7 @@
             position: relative;
             width: 50px;
             height: 50px;
-            border: 1px solid var(--c-ink);
+            border: 1px solid #17354d;
         }
 
         .preview-item img { width: 100%; height: 100%; object-fit: cover; }
@@ -217,7 +180,7 @@
             position: absolute;
             top: -5px;
             right: -5px;
-            background: var(--c-accent);
+            background: #e46b22;
             color: white;
             border-radius: 20%;
             width: 18px;
@@ -233,9 +196,9 @@
 
         /* ── Post List ── */
         .post-item {
-            border-bottom: 1px solid var(--c-ink);
+            border-bottom: 1px solid #17354d;
             padding: 15px 0;
-            color: var(--c-ink);
+            color: #17354d;
             display: flex;
             flex-direction: column;
         }
@@ -247,15 +210,15 @@
             display: flex;
             gap: 8px;
             font-size: 7px;
-            color: var(--c-paper);
+            color: #fffac1;
             cursor: pointer;
             margin-bottom: 5px;
         }
 
         /* ── Diary Cards ── */
         .diary-card {
-            background-color: var(--c-card);
-            border: 2px solid var(--c-ink);
+            background-color: #3b74a7;
+            border: 2px solid #17354d;
             margin-bottom: 25px;
             padding: 15px;
             cursor: pointer;
@@ -274,14 +237,14 @@
             width: 100%;
             aspect-ratio: 16/9;
             object-fit: cover;
-            border: 1px solid var(--c-ink);
-            background-color: var(--c-card-light);
+            border: 1px solid #17354d;
+            background-color: #5a8fb1;
             margin-bottom: 12px;
             display: block;
         }
 
         .diary-card-title {
-            color: var(--c-paper);
+            color: #fffac1;
             font-family: sans-serif;
             font-weight: bold;
             font-size: 15px;
@@ -289,9 +252,9 @@
         }
 
         .diary-card-date {
-            color: var(--c-paper);
+            color: #fffac1;
             font-size: 8px;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             opacity: 0.8;
             letter-spacing: -0.5px;
         }
@@ -308,20 +271,20 @@
         .gb-btn {
             width: 22px;
             height: 22px;
-            background-color: var(--c-ink);
+            background-color: #17354d;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 10px;
-            color: var(--c-card-light);
+            color: #5a8fb1;
         }
 
         /* ── Diary Detail View ── */
         #diary-detail-view {
             display: none;
-            color: var(--c-ink);
+            color: #17354d;
             min-height: 500px;
             padding-bottom: 50px;
         }
@@ -330,7 +293,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid var(--c-ink);
+            border-bottom: 2px solid #17354d;
             padding-bottom: 10px;
             margin-bottom: 25px;
         }
@@ -340,28 +303,28 @@
             font-family: sans-serif;
             font-weight: bold;
             margin-bottom: 5px;
-            color: var(--c-ink);
+            color: #17354d;
         }
 
         .detail-date {
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 10px;
-            color: var(--c-paper);
+            color: #fffac1;
         }
 
         .detail-actions {
             display: flex;
             gap: 10px;
             font-size: 8px;
-            font-family: var(--c-font);
-            color: var(--c-paper);
+            font-family: 'Press Start 2P';
+            color: #fffac1;
             cursor: pointer;
         }
 
         .detail-images img {
             width: 100%;
             margin-bottom: 15px;
-            border: 1px solid var(--c-ink);
+            border: 1px solid #17354d;
             cursor: zoom-in;
         }
 
@@ -369,15 +332,15 @@
             font-family: sans-serif;
             font-size: 15px;
             line-height: 1.7;
-            color: var(--c-ink);
+            color: #17354d;
             margin-bottom: 30px;
         }
 
         /* ── Diary Full Editor ── */
         #diary-full-editor {
             display: none;
-            background-color: var(--c-paper);
-            border: 1px solid var(--c-ink);
+            background-color: #fffac1;
+            border: 1px solid #17354d;
             padding: 20px;
         }
 
@@ -385,7 +348,7 @@
             width: 100%;
             background: transparent;
             border: none;
-            border-bottom: 2px solid var(--c-ink);
+            border-bottom: 2px solid #17354d;
             font-family: sans-serif;
             font-size: 18px;
             font-weight: bold;
@@ -476,7 +439,7 @@
             position: absolute;
             bottom: 18px;
             left: 50%; transform: translateX(-50%);
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 9px;
             color: rgba(255,255,255,0.6);
             letter-spacing: 1px;
@@ -489,7 +452,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             color: rgba(255,255,255,0.7);
         }
         #modalZoomControls .zoom-btn {
@@ -513,7 +476,7 @@
 
         .backup-text {
             font-size: 10px;
-            color: var(--c-btn-bg);
+            color: #1a2a3a;
             cursor: pointer;
             transition: color 0.3s;
         }
@@ -533,27 +496,27 @@
 
         .page-btn {
             cursor: pointer;
-            color: var(--c-paper);
-            font-family: var(--c-font);
+            color: #fffac1;
+            font-family: 'Press Start 2P';
             font-size: 10px;
             transition: transform 0.08s ease;
             padding: 2px 3px;
         }
 
         .page-btn:active { transform: scale(0.9); }
-        .page-btn.active { color: var(--c-accent); text-decoration: underline; }
+        .page-btn.active { color: #e46b22; text-decoration: underline; }
 
         .page-ellipsis {
-            color: var(--c-paper);
+            color: #fffac1;
             opacity: 0.5;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 10px;
         }
 
         .page-nav {
             cursor: pointer;
-            color: var(--c-paper);
-            font-family: var(--c-font);
+            color: #fffac1;
+            font-family: 'Press Start 2P';
             font-size: 9px;
             opacity: 0.75;
             transition: opacity 0.15s, transform 0.08s ease;
@@ -572,7 +535,7 @@
             margin-bottom: 14px;
         }
 
-        .search-icon { font-size: 11px; opacity: 0.4; color: var(--c-ink); flex-shrink: 0; }
+        .search-icon { font-size: 11px; opacity: 0.4; color: #17354d; flex-shrink: 0; }
 
         .search-input {
             flex: 1;
@@ -580,19 +543,19 @@
             border: none;
             border-bottom: 1px solid rgba(23, 53, 77, 0.3);
             padding: 4px 2px;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 8px;
-            color: var(--c-ink);
+            color: #17354d;
             outline: none;
             transition: border-color 0.2s;
         }
 
         .search-input:focus { border-bottom-color: rgba(23, 53, 77, 0.65); }
-        .search-input::placeholder { color: var(--c-ink); opacity: 0.3; }
+        .search-input::placeholder { color: #17354d; opacity: 0.3; }
 
         .search-clear {
             font-size: 10px;
-            color: var(--c-ink);
+            color: #17354d;
             opacity: 0;
             cursor: pointer;
             transition: opacity 0.15s;
@@ -603,17 +566,17 @@
         .search-clear.visible:hover { opacity: 0.7; }
 
         .search-count {
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 8px;
-            color: var(--c-highlight);
+            color: #f8cf39;
             text-align: right;
             margin-bottom: 10px;
             min-height: 14px;
         }
 
         mark.hl {
-            background: var(--c-highlight);
-            color: var(--c-ink);
+            background: #f8cf39;
+            color: #17354d;
             border-radius: 2px;
             padding: 0 1px;
         }
@@ -626,12 +589,12 @@
 
         .img-filter-btn {
             background: none;
-            border: 1px solid var(--c-ink);
+            border: 1px solid #17354d;
             border-radius: 12px;
             padding: 3px 8px;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 7px;
-            color: var(--c-ink);
+            color: #17354d;
             cursor: pointer;
             opacity: 0.6;
             transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
@@ -639,8 +602,8 @@
         .img-filter-btn:hover { opacity: 0.9; }
         .img-filter-btn:active { transform: scale(0.94); }
         .img-filter-btn.active {
-            background-color: var(--c-ink);
-            color: var(--c-paper);
+            background-color: #17354d;
+            color: #fffac1;
             opacity: 1;
         }
 
@@ -659,15 +622,15 @@
             animation: failFlicker 1s steps(2, start) infinite;
         }
         @keyframes failFlicker {
-            0%, 100% { opacity: 1; color: var(--c-paper); }
-            50%      { opacity: 0.35; color: var(--c-accent); }
+            0%, 100% { opacity: 1; color: #fffac1; }
+            50%      { opacity: 0.35; color: #e46b22; }
         }
 
         .retry-link {
             display: inline-block;
             text-decoration: underline;
             cursor: pointer;
-            color: var(--c-highlight);
+            color: #f8cf39;
         }
 
         /* ── Animations ── */
@@ -679,12 +642,12 @@
         .spinning { animation: spin 3s linear infinite; }
 
         @keyframes blink-color {
-            0%, 100% { color: var(--c-paper); }
-            50% { color: var(--c-highlight); }
+            0%, 100% { color: #fffac1; }
+            50% { color: #f8cf39; }
         }
 
         .blinking-text {
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P';
             font-size: 16px;
             animation: blink-color 1s infinite;
         }
@@ -725,7 +688,6 @@
 
         <div class="nav-tabs">
             <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
-            <button id="tabNin"    class="tab-btn"        onclick="switchTab('NIN')">NIN</button>
             <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')">NEG</button>
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
         </div>
@@ -752,25 +714,6 @@
         <div id="bubble-pagination" class="pagination"></div>
     </div>
 
-    <!-- NIN Tab -->
-    <div id="nin-container" style="display:none">
-        <div class="editor-box" id="nin-editor-box">
-            <textarea id="nin-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
-            <div id="nin-previews" class="preview-container"></div>
-            <div class="editor-controls">
-                <input type="file" id="ninFile" multiple accept="image/*" onchange="handleImg(this, 'NIN')" style="display:none">
-                <button class="btn-pixel" onclick="document.getElementById('ninFile').click()">IMG</button>
-                <button id="ninSendBtn" class="btn-pixel" onclick="savePost('NIN')">SEND</button>
-            </div>
-        </div>
-        <div class="filter-bar">
-            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🖼 IMG ONLY</span>
-        </div>
-        <div class="search-count" id="nin-search-count"></div>
-        <div id="nin-list"></div>
-        <div id="nin-pagination" class="pagination"></div>
-    </div>
-
     <!-- NEG Tab -->
     <div id="neg-container" style="display:none">
         <div class="editor-box" id="neg-editor-box">
@@ -793,7 +736,7 @@
     <!-- DIARY Tab -->
     <div id="diary-container" style="display:none">
         <div style="text-align:right; margin-bottom:15px;">
-            <span style="font-size:10px; color:var(--c-paper); cursor:pointer; font-family: var(--c-font);"
+            <span style="font-size:10px; color:#fffac1; cursor:pointer; font-family:'Press Start 2P';"
                   onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
         </div>
         <div class="search-count" id="diary-search-count"></div>
@@ -815,13 +758,13 @@
         <div id="detailImages"  class="detail-images"></div>
         <div id="detailContent" class="detail-content"></div>
         <div class="editor-controls">
-            <button class="btn-pixel" style="background:var(--c-accent)" onclick="closeDiaryDetail()">CLOSE</button>
+            <button class="btn-pixel" style="background:#e46b22" onclick="closeDiaryDetail()">CLOSE</button>
         </div>
     </div>
 
     <!-- Diary Editor -->
     <div id="diary-full-editor" style="display:none">
-        <div id="diary-editor-box" style="background:var(--c-paper); padding:15px; border:1px solid var(--c-ink); transition: border-color 0.15s, background-color 0.15s;">
+        <div id="diary-editor-box" style="background:#fffac1; padding:15px; border:1px solid #17354d; transition: border-color 0.15s, background-color 0.15s;">
         <input type="text" id="diaryTitleInput" placeholder="제목">
         <textarea id="diaryContentInput" placeholder="내용"></textarea>
         <div id="diary-previews" class="preview-container"></div>
@@ -829,7 +772,7 @@
             <input type="file" id="diaryFile" multiple accept="image/*" onchange="handleImg(this, 'DIARY')" style="display:none">
             <button class="btn-pixel" onclick="document.getElementById('diaryFile').click()">IMG</button>
             <button class="btn-pixel" id="diarySendBtn" onclick="savePost('DIARY')">SEND</button>
-            <button class="btn-pixel" style="background:var(--c-accent)" onclick="closeDiaryEditor()">BACK</button>
+            <button class="btn-pixel" style="background:#e46b22" onclick="closeDiaryEditor()">BACK</button>
         </div>
         </div>
     </div>
@@ -894,11 +837,11 @@
     }
 
     function loadingHTML() {
-        return `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
+        return `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
     }
 
     function failHTML(retryOnclick) {
-        return `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">
+        return `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
             <span class="fail-flicker">${bouncyText('LOAD FAILED.')}</span><br><br>
             <span class="retry-link" onclick="${retryOnclick}">💣 RETRY</span>
         </div>`;
@@ -994,7 +937,7 @@
     async function loadDiary() {
         const listEl = document.getElementById('diary-list');
         if (!window.diaryPosts) {
-            listEl.innerHTML = `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
+            listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
         }
         try {
             for (let i = 0; i < 3; i++) {
@@ -1006,9 +949,9 @@
             }
         } catch (e) {
             console.error('loadDiary failed', e);
-            listEl.innerHTML = `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">
+            listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
                 LOAD FAILED.<br><br>
-                <span style="text-decoration:underline; cursor:pointer; color:var(--c-highlight);" onclick="window.loadDiary()">💣 RETRY</span>
+                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary()">💣 RETRY</span>
             </div>`;
             return;
         }
@@ -1027,7 +970,6 @@
     async function init() {
         await waitForRenderBoard();
         loadPosts('BUBBLE', 1);
-        loadPosts('NIN', 1);
         loadPosts('NEG', 1);
         loadDiary();
     }
@@ -1061,7 +1003,7 @@
 
     // ── Tab switching ──
     function switchTab(tab) {
-        ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => {
+        ['BUBBLE', 'NEG', 'DIARY'].forEach(t => {
             document.getElementById('tab' + t.charAt(0) + t.slice(1).toLowerCase()).classList.toggle('active', t === tab);
             document.getElementById(t.toLowerCase() + '-container').style.display = (t === tab) ? 'block' : 'none';
         });
@@ -1071,7 +1013,7 @@
 
     // ── Search ──
     let searchQuery = '';
-    const imgFilter = { BUBBLE: false, NIN: false, NEG: false };
+    const imgFilter = { BUBBLE: false, NEG: false };
 
     function toggleImgFilter(type) {
         imgFilter[type] = !imgFilter[type];
@@ -1087,13 +1029,12 @@
         searchQuery = document.getElementById('global-search').value.trim();
         document.getElementById('search-clear-btn').classList.toggle('visible', searchQuery.length > 0);
 
-        ['bubble', 'nin', 'neg'].forEach(t => {
+        ['bubble', 'neg'].forEach(t => {
             const pg = document.getElementById(t + '-pagination');
             if (pg) pg.style.display = (searchQuery || imgFilter[t.toUpperCase()]) ? 'none' : 'flex';
         });
 
         renderBoard('BUBBLE');
-        renderBoard('NIN');
         renderBoard('NEG');
         renderBoard('DIARY');
     }
@@ -1102,7 +1043,7 @@
         searchQuery = '';
         document.getElementById('global-search').value = '';
         document.getElementById('search-clear-btn').classList.remove('visible');
-        ['bubble', 'nin', 'neg'].forEach(t => {
+        ['bubble', 'neg'].forEach(t => {
             const countEl = document.getElementById(t + '-search-count');
             if (countEl) countEl.innerText = '';
         });
@@ -1110,7 +1051,7 @@
         if (dc) dc.innerText = '';
 
         // if img filter is active for a board, just re-render (no need to reload from server)
-        ['BUBBLE', 'NIN', 'NEG'].forEach(t => {
+        ['BUBBLE', 'NEG'].forEach(t => {
             if (imgFilter[t]) renderBoard(t);
             else window.loadPosts(t, 1);
         });
@@ -1158,7 +1099,7 @@
         }
 
         if (posts.length === 0 && (kw || onlyImages)) {
-            container.innerHTML = `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">
+            container.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
                 ${onlyImages && !kw ? 'NO IMAGE POSTS.' : 'NO RESULTS.'}
             </div>`;
             return;
@@ -1171,12 +1112,12 @@
                     <span onclick="movePostFromEl(this)">MOVE</span>
                     <span onclick="deletePostFromEl(this)">DEL</span>
                 </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content), kw)} <span style="color:var(--c-paper); font-size:9px;">${p.date}</span></div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content), kw)} <span style="color:#fffac1; font-size:9px;">${p.date}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"
                      data-images='${(p.images||[]).map(u=>u.replace(/'/g,"&#39;")).join(",")}'>
                     ${(p.images || []).map(img =>
                         `<img src="${img}" onclick="openModalFromThumb(this)"
-                              style="width:70px; height:70px; object-fit:cover; border:1px solid var(--c-ink); cursor:zoom-in;">`
+                              style="width:70px; height:70px; object-fit:cover; border:1px solid #17354d; cursor:zoom-in;">`
                     ).join('')}
                 </div>
             </div>
@@ -1201,7 +1142,7 @@
         }
 
         if (posts.length === 0) {
-            container.innerHTML = `<div style="color:var(--c-paper); text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
+            container.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
             return;
         }
 
@@ -1363,7 +1304,7 @@
                 imageUrls.push(await getDownloadURL(storageRef));
             }
 
-            if (type === 'BUBBLE' || type === 'NEG' || type === 'NIN') {
+            if (type === 'BUBBLE' || type === 'NEG') {
                 const inputEl = document.getElementById(type.toLowerCase() + '-text');
                 const content = inputEl.value;
 
@@ -1406,57 +1347,16 @@
     }
 
     // ── Delete post ──
-    const ALL_BOARDS = ['BUBBLE', 'NIN', 'NEG'];
-
     function movePostFromEl(el) {
-        const item     = el.closest('.post-item');
+        const item   = el.closest('.post-item');
         const fromType = item.dataset.type;
+        const toType   = fromType === 'BUBBLE' ? 'NEG' : 'BUBBLE';
         const id       = item.dataset.id;
         const imgDiv   = item.querySelector('[data-images]');
         const images   = imgDiv && imgDiv.dataset.images ? imgDiv.dataset.images.split(',') : [];
-        const targets  = ALL_BOARDS.filter(t => t !== fromType);
 
-        openMoveTargetPopup(el, targets, (toType) => {
-            movePost(fromType, toType, id, images);
-        });
-    }
-
-    function openMoveTargetPopup(anchorEl, targets, onPick) {
-        // remove any existing popup first
-        const existing = document.getElementById('movePopup');
-        if (existing) existing.remove();
-
-        const popup = document.createElement('div');
-        popup.id = 'movePopup';
-        popup.className = 'move-popup';
-
-        targets.forEach(t => {
-            const opt = document.createElement('span');
-            opt.className = 'move-popup-option';
-            opt.innerText = t;
-            opt.onclick = (e) => {
-                e.stopPropagation();
-                popup.remove();
-                onPick(t);
-            };
-            popup.appendChild(opt);
-        });
-
-        document.body.appendChild(popup);
-
-        const rect = anchorEl.getBoundingClientRect();
-        popup.style.top  = (window.scrollY + rect.bottom + 4) + 'px';
-        popup.style.left = Math.max(8, window.scrollX + rect.right - popup.offsetWidth) + 'px';
-
-        // close on outside click
-        setTimeout(() => {
-            document.addEventListener('click', function closeOnce(e) {
-                if (!popup.contains(e.target)) {
-                    popup.remove();
-                    document.removeEventListener('click', closeOnce);
-                }
-            });
-        }, 0);
+        if (!confirm(`✂️ ${fromType} → ${toType} 로 이동하시겠습니까?`)) return;
+        movePost(fromType, toType, id, images);
     }
 
     async function movePost(fromType, toType, id, images) {
