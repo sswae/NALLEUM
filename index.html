@@ -29,6 +29,32 @@
             position: relative;
         }
 
+        /* ── Scroll to Top ── */
+        #topBtn {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 900;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background-color: var(--c-btn-bg);
+            color: var(--c-paper);
+            border: 2px solid #000;
+            border-bottom-width: 4px;
+            font-family: var(--c-font);
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.9;
+            transition: transform 0.08s ease, border-bottom-width 0.08s ease, opacity 0.15s;
+        }
+        #topBtn.visible { display: flex; }
+        #topBtn:hover { opacity: 1; }
+        #topBtn:active { transform: translateY(2px); border-bottom-width: 2px; }
+
         /* ── Loading Screen ── */
         #loading-screen {
             position: fixed;
@@ -778,6 +804,8 @@
     </div>
 </div>
 
+<button id="topBtn" onclick="scrollToTop()" aria-label="맨 위로">▲</button>
+
 <div id="imgModal">
     <span id="modalPrev" onclick="event.stopPropagation(); modalNav(-1)">&#10094;</span>
     <div id="modalImgWrap">
@@ -990,6 +1018,18 @@
     let editPostId  = null;
     let player = null, isPlaying = false;
     const DEFAULT_IMAGES = ["default1.png", "default2.png"];
+
+    // ── Scroll to Top ──
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    (function setupTopBtn() {
+        const btn = document.getElementById('topBtn');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+    })();
 
     // ── Loading screen ──
     function enterApp() {
