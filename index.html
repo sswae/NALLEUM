@@ -1367,6 +1367,7 @@
 
     // init drag-and-drop on all editor boxes
     setupDragDrop('bubble-editor-box', 'bubble-previews');
+    setupDragDrop('nin-editor-box',    'nin-previews');
     setupDragDrop('neg-editor-box',    'neg-previews');
     setupDragDrop('diary-editor-box',  'diary-previews');
 
@@ -1702,22 +1703,40 @@
     // ── Music ──
     const audioPlayer = document.getElementById('audio-player');
 
+    // Surface load errors (e.g. file missing/404) to the console for diagnosis
+    audioPlayer.addEventListener('error', () => {
+        console.error('audio-player failed to load:', audioPlayer.error, audioPlayer.currentSrc);
+    });
+
     function toggleMusic() {
         const btn  = document.getElementById('playBtn');
         const star = document.getElementById('star');
 
         if (!isPlaying) {
-            audioPlayer.play();
-            btn.innerText = 'STOP';
-            btn.classList.add('playing');
-            star.classList.add('spinning');
+            const playPromise = audioPlayer.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.then(() => {
+                    btn.innerText = 'STOP';
+                    btn.classList.add('playing');
+                    star.classList.add('spinning');
+                    isPlaying = true;
+                }).catch(err => {
+                    console.error('음악 재생 실패:', err);
+                    alert('음악을 재생할 수 없어요. (파일을 찾을 수 없거나 재생이 차단됐어요)');
+                });
+            } else {
+                btn.innerText = 'STOP';
+                btn.classList.add('playing');
+                star.classList.add('spinning');
+                isPlaying = true;
+            }
         } else {
             audioPlayer.pause();
             btn.innerText = 'PLAY';
             btn.classList.remove('playing');
             star.classList.remove('spinning');
+            isPlaying = false;
         }
-        isPlaying = !isPlaying;
     }
 
     // ── Backup ──
@@ -1755,12 +1774,13 @@
     }
 
     // ── Ctrl+Enter to send ──
-    ['bubble-text', 'neg-text', 'diaryContentInput'].forEach(id => {
+    ['bubble-text', 'nin-text', 'neg-text', 'diaryContentInput'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 if (id === 'bubble-text')        savePost('BUBBLE');
+                else if (id === 'nin-text')      savePost('NIN');
                 else if (id === 'neg-text')      savePost('NEG');
                 else if (id === 'diaryContentInput') savePost('DIARY');
             }
