@@ -10,6 +10,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
+        /* ── Move Popup ── */
+        .move-popup {
+            position: absolute;
+            z-index: 2000;
+            background: #fffac1;
+            border: 1px solid #17354d;
+            border-bottom-width: 3px;
+            display: flex;
+            flex-direction: column;
+            min-width: 70px;
+        }
+        .move-popup-option {
+            padding: 6px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            color: #17354d;
+            cursor: pointer;
+        }
+        .move-popup-option:hover { background: #f8cf39; }
+        .move-popup-option + .move-popup-option { border-top: 1px solid rgba(0,0,0,0.15); }
+
         /* ── Reset & Base ── */
         * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
 
@@ -39,11 +60,11 @@
             height: 26px;
             padding: 0 8px;
             border-radius: 0;
-            background-color: var(--c-btn-bg);
-            color: var(--c-paper);
+            background-color: #1a2a3a;
+            color: #fffac1;
             border: 2px solid #000;
             border-bottom-width: 4px;
-            font-family: var(--c-font);
+            font-family: 'Press Start 2P', cursive;
             font-size: 8px;
             display: none;
             align-items: center;
@@ -969,12 +990,13 @@
     function renderPagination(type, current, total) {
         const container = document.getElementById(type.toLowerCase() + '-pagination');
 
-        // Always show pages 1-8, the last page, and a small neighborhood
-        // around the current page (in case it's deep past page 8).
+        // Show a window of pages centered on the current page, plus the
+        // first and last page for quick jumps to either end.
+        const WINDOW = 4; // pages shown on each side of current
         const show = new Set();
-        for (let i = 1; i <= Math.min(8, total); i++) show.add(i);
+        show.add(1);
         show.add(total);
-        for (let i = current - 1; i <= current + 1; i++) {
+        for (let i = current - WINDOW; i <= current + WINDOW; i++) {
             if (i >= 1 && i <= total) show.add(i);
         }
 
