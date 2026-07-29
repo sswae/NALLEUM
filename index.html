@@ -714,6 +714,7 @@
 
         <div class="nav-tabs">
             <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
+            <button id="tabNin"    class="tab-btn"        onclick="switchTab('NIN')">NIN</button>
             <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')">NEG</button>
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
         </div>
@@ -738,6 +739,25 @@
         <div class="search-count" id="bubble-search-count"></div>
         <div id="bubble-list"></div>
         <div id="bubble-pagination" class="pagination"></div>
+    </div>
+
+    <!-- NIN Tab -->
+    <div id="nin-container" style="display:none">
+        <div class="editor-box" id="nin-editor-box">
+            <textarea id="nin-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+            <div id="nin-previews" class="preview-container"></div>
+            <div class="editor-controls">
+                <input type="file" id="ninFile" multiple accept="image/*" onchange="handleImg(this, 'NIN')" style="display:none">
+                <button class="btn-pixel" onclick="document.getElementById('ninFile').click()">IMG</button>
+                <button id="ninSendBtn" class="btn-pixel" onclick="savePost('NIN')">SEND</button>
+            </div>
+        </div>
+        <div class="filter-bar">
+            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🖼 IMG ONLY</span>
+        </div>
+        <div class="search-count" id="nin-search-count"></div>
+        <div id="nin-list"></div>
+        <div id="nin-pagination" class="pagination"></div>
     </div>
 
     <!-- NEG Tab -->
@@ -856,6 +876,7 @@
 
     // ── Pagination state ──
     const POSTS_PER_PAGE = 20;
+    window.currentPage = { BUBBLE: 1, NIN: 1, NEG: 1 };
 
     // ── Arcade text helpers ──
     function bouncyText(text) {
@@ -894,7 +915,8 @@
         return { empty: true, docs: [] };
     }
 
-    async function loadPosts(type, page = 1) {
+    async function loadPosts(type, page = 1, opts = {}) {
+        const scroll = opts.scroll !== false;
         if (!window.fbAllPosts) window.fbAllPosts = {};
 
         if (page === 1 || !window.fbAllPosts[type]) {
@@ -924,27 +946,44 @@
         const total = Math.ceil(all.length / POSTS_PER_PAGE) || 1;
         const start = (page - 1) * POSTS_PER_PAGE;
         window[type.toLowerCase() + 'Posts'] = all.slice(start, start + POSTS_PER_PAGE);
+        window.currentPage[type] = page;
 
-        // show pagination (might be hidden during search)
+        // pagination stays hidden while search/img-filter is active
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
-        if (pg) pg.style.display = 'flex';
+        if (pg) pg.style.display = (window.searchQuery || window.imgFilter[type]) ? 'none' : 'flex';
 
         window.renderBoard(type);
         renderPagination(type, page, total);
-        window.scrollTo(0, 0);
+        if (scroll) window.scrollTo(0, 0);
+    }
+
+    // Reload a board's data in place — keeps the user on their current page
+    // and preserves any active search/img-filter view, instead of forcing
+    // them back to page 1. Used after edit/delete/save.
+    async function refreshBoard(type) {
+        if (window.fbAllPosts) delete window.fbAllPosts[type];
+        const page = window.currentPage[type] || 1;
+        await loadPosts(type, page, { scroll: false });
     }
 
     function renderPagination(type, current, total) {
         const container = document.getElementById(type.toLowerCase() + '-pagination');
 
-        const pages = [];
-        for (let i = 1; i <= total; i++) {
-            if (i === 1 || i === total || Math.abs(i - current) <= 2) {
-                pages.push(i);
-            } else if (pages[pages.length - 1] !== '…') {
-                pages.push('…');
-            }
+        // Always show pages 1-8, the last page, and a small neighborhood
+        // around the current page (in case it's deep past page 8).
+        const show = new Set();
+        for (let i = 1; i <= Math.min(8, total); i++) show.add(i);
+        show.add(total);
+        for (let i = current - 1; i <= current + 1; i++) {
+            if (i >= 1 && i <= total) show.add(i);
         }
+
+        const sorted = [...show].sort((a, b) => a - b);
+        const pages = [];
+        sorted.forEach((p, idx) => {
+            if (idx > 0 && p - sorted[idx - 1] > 1) pages.push('…');
+            pages.push(p);
+        });
 
         const prevDisabled = current <= 1 ? 'disabled' : '';
         const nextDisabled = current >= total ? 'disabled' : '';
@@ -998,6 +1037,7 @@
     async function init() {
         await waitForRenderBoard();
         loadPosts('BUBBLE', 1);
+        loadPosts('NIN', 1);
         loadPosts('NEG', 1);
         loadDiary();
     }
@@ -1007,6 +1047,7 @@
     window.loadPosts      = loadPosts;
     window.loadDiary      = loadDiary;
     window.renderPagination = renderPagination;
+    window.refreshBoard   = refreshBoard;
 </script>
 
 <!-- App Logic -->
@@ -1043,7 +1084,7 @@
 
     // ── Tab switching ──
     function switchTab(tab) {
-        ['BUBBLE', 'NEG', 'DIARY'].forEach(t => {
+        ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => {
             document.getElementById('tab' + t.charAt(0) + t.slice(1).toLowerCase()).classList.toggle('active', t === tab);
             document.getElementById(t.toLowerCase() + '-container').style.display = (t === tab) ? 'block' : 'none';
         });
@@ -1052,26 +1093,26 @@
     }
 
     // ── Search ──
-    let searchQuery = '';
-    const imgFilter = { BUBBLE: false, NEG: false };
+    window.searchQuery = '';
+    window.imgFilter = { BUBBLE: false, NIN: false, NEG: false };
 
     function toggleImgFilter(type) {
-        imgFilter[type] = !imgFilter[type];
-        document.getElementById(type.toLowerCase() + '-img-filter').classList.toggle('active', imgFilter[type]);
+        window.imgFilter[type] = !window.imgFilter[type];
+        document.getElementById(type.toLowerCase() + '-img-filter').classList.toggle('active', window.imgFilter[type]);
 
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
-        if (pg) pg.style.display = (imgFilter[type] || searchQuery) ? 'none' : 'flex';
+        if (pg) pg.style.display = (window.imgFilter[type] || window.searchQuery) ? 'none' : 'flex';
 
         renderBoard(type);
     }
 
     function onSearch() {
-        searchQuery = document.getElementById('global-search').value.trim();
-        document.getElementById('search-clear-btn').classList.toggle('visible', searchQuery.length > 0);
+        window.searchQuery = document.getElementById('global-search').value.trim();
+        document.getElementById('search-clear-btn').classList.toggle('visible', window.searchQuery.length > 0);
 
-        ['bubble', 'neg'].forEach(t => {
+        ['bubble', 'nin', 'neg'].forEach(t => {
             const pg = document.getElementById(t + '-pagination');
-            if (pg) pg.style.display = (searchQuery || imgFilter[t.toUpperCase()]) ? 'none' : 'flex';
+            if (pg) pg.style.display = (window.searchQuery || window.imgFilter[t.toUpperCase()]) ? 'none' : 'flex';
         });
 
         renderBoard('BUBBLE');
@@ -1080,10 +1121,10 @@
     }
 
     function clearSearch() {
-        searchQuery = '';
+        window.searchQuery = '';
         document.getElementById('global-search').value = '';
         document.getElementById('search-clear-btn').classList.remove('visible');
-        ['bubble', 'neg'].forEach(t => {
+        ['bubble', 'nin', 'neg'].forEach(t => {
             const countEl = document.getElementById(t + '-search-count');
             if (countEl) countEl.innerText = '';
         });
@@ -1091,8 +1132,8 @@
         if (dc) dc.innerText = '';
 
         // if img filter is active for a board, just re-render (no need to reload from server)
-        ['BUBBLE', 'NEG'].forEach(t => {
-            if (imgFilter[t]) renderBoard(t);
+        ['BUBBLE', 'NIN', 'NEG'].forEach(t => {
+            if (window.imgFilter[t]) renderBoard(t);
             else window.loadPosts(t, 1);
         });
         renderBoard('DIARY');
@@ -1113,8 +1154,8 @@
     function renderBoard(type) {
         if (type === 'DIARY') return renderDiary();
 
-        const kw          = searchQuery;
-        const onlyImages  = imgFilter[type];
+        const kw          = window.searchQuery;
+        const onlyImages  = window.imgFilter[type];
         const container   = document.getElementById(type.toLowerCase() + '-list');
         const countEl      = document.getElementById(type.toLowerCase() + '-search-count');
 
@@ -1166,7 +1207,7 @@
 
     function renderDiary() {
         const container = document.getElementById('diary-list');
-        const kw        = searchQuery;
+        const kw        = window.searchQuery;
         const countEl   = document.getElementById('diary-search-count');
         let   posts     = window.diaryPosts || [];
 
@@ -1344,10 +1385,11 @@
                 imageUrls.push(await getDownloadURL(storageRef));
             }
 
-            if (type === 'BUBBLE' || type === 'NEG') {
+            if (type === 'BUBBLE' || type === 'NIN' || type === 'NEG') {
                 const inputEl = document.getElementById(type.toLowerCase() + '-text');
                 const content = inputEl.value;
 
+                const wasEdit = !!editPostId;
                 if (editPostId) {
                     const merged = [...tempImages.filter(img => img.startsWith('http')), ...imageUrls];
                     await updateDoc(doc(window.db, type, editPostId), { content, images: merged });
@@ -1356,8 +1398,12 @@
                     await addDoc(collection(window.db, type), { content, images: imageUrls, date, createdAt: Date.now() });
                 }
                 inputEl.value = '';
-                if (window.fbAllPosts) delete window.fbAllPosts[type];
-                window.loadPosts(type, 1);
+                if (wasEdit) {
+                    await window.refreshBoard(type);
+                } else {
+                    if (window.fbAllPosts) delete window.fbAllPosts[type];
+                    window.loadPosts(type, 1);
+                }
             } else {
                 const title   = document.getElementById('diaryTitleInput').value || "NO TITLE";
                 const content = document.getElementById('diaryContentInput').value;
@@ -1387,16 +1433,55 @@
     }
 
     // ── Delete post ──
+    const ALL_BOARDS = ['BUBBLE', 'NIN', 'NEG'];
+
     function movePostFromEl(el) {
-        const item   = el.closest('.post-item');
+        const item     = el.closest('.post-item');
         const fromType = item.dataset.type;
-        const toType   = fromType === 'BUBBLE' ? 'NEG' : 'BUBBLE';
         const id       = item.dataset.id;
         const imgDiv   = item.querySelector('[data-images]');
         const images   = imgDiv && imgDiv.dataset.images ? imgDiv.dataset.images.split(',') : [];
+        const targets  = ALL_BOARDS.filter(t => t !== fromType);
 
-        if (!confirm(`✂️ ${fromType} → ${toType} 로 이동하시겠습니까?`)) return;
-        movePost(fromType, toType, id, images);
+        openMoveTargetPopup(el, targets, (toType) => {
+            movePost(fromType, toType, id, images);
+        });
+    }
+
+    function openMoveTargetPopup(anchorEl, targets, onPick) {
+        const existing = document.getElementById('movePopup');
+        if (existing) existing.remove();
+
+        const popup = document.createElement('div');
+        popup.id = 'movePopup';
+        popup.className = 'move-popup';
+
+        targets.forEach(t => {
+            const opt = document.createElement('span');
+            opt.className = 'move-popup-option';
+            opt.innerText = t;
+            opt.onclick = (e) => {
+                e.stopPropagation();
+                popup.remove();
+                onPick(t);
+            };
+            popup.appendChild(opt);
+        });
+
+        document.body.appendChild(popup);
+
+        const rect = anchorEl.getBoundingClientRect();
+        popup.style.top  = (window.scrollY + rect.bottom + 4) + 'px';
+        popup.style.left = Math.max(8, window.scrollX + rect.right - popup.offsetWidth) + 'px';
+
+        setTimeout(() => {
+            document.addEventListener('click', function closeOnce(e) {
+                if (!popup.contains(e.target)) {
+                    popup.remove();
+                    document.removeEventListener('click', closeOnce);
+                }
+            });
+        }, 0);
     }
 
     async function movePost(fromType, toType, id, images) {
@@ -1418,8 +1503,9 @@
                 delete window.fbAllPosts[fromType];
                 delete window.fbAllPosts[toType];
             }
-            window.loadPosts(fromType, 1);
-            window.loadPosts(toType, 1);
+            const fromPage = window.currentPage[fromType] || 1;
+            window.loadPosts(fromType, fromPage, { scroll: false });
+            window.loadPosts(toType, 1, { scroll: false });
         } catch(e) {
             console.error(e);
             alert('이동 실패!');
@@ -1450,15 +1536,18 @@
             }
             if (type === 'DIARY') { closeDiaryDetail(); window.loadDiary(); }
             else {
-                if (window.fbAllPosts) delete window.fbAllPosts[type];
-                window.loadPosts(type, 1);
+                await window.refreshBoard(type);
             }
         } catch (e) { console.error(e); }
     }
 
     // ── Edit ──
     function startEditPost(type, id) {
-        const post = window[type.toLowerCase() + 'Posts'].find(x => x.id === id);
+        const cache = (window.fbAllPosts && window.fbAllPosts[type]) || [];
+        const paged = window[type.toLowerCase() + 'Posts'] || [];
+        const post  = cache.find(x => x.id === id) || paged.find(x => x.id === id);
+        if (!post) { alert('게시글을 찾을 수 없어요.'); return; }
+
         document.getElementById(type.toLowerCase() + '-text').value = post.content;
         tempImages = [...(post.images || [])];
         updatePreview(type.toLowerCase() + '-previews');
