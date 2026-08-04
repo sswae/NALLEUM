@@ -659,7 +659,7 @@
 
         /* ── Hashtags ── */
         .hashtag {
-            color: #f8cf39;
+            color: #fffac1;
             font-weight: bold;
             cursor: pointer;
         }
@@ -1810,28 +1810,36 @@
     // ── Backup ──
     async function backupToMarkdown() {
         const { getDocs, collection, query, orderBy } = window.fbActions;
-        const q    = query(collection(window.db, "BUBBLE"), orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
 
         const zip       = new JSZip();
         const imgFolder = zip.folder("images");
-        let md = "# NALLEUM BUBBLE BACKUP\n\n";
+        let md = "# NALLEUM BACKUP\n\n";
 
-        for (const d of snap.docs) {
-            const data = d.data();
-            md += `## ${data.date}\n${data.content}\n`;
+        async function appendBoard(type, title) {
+            const q    = query(collection(window.db, type), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
 
-            if (data.images) {
-                for (let i = 0; i < data.images.length; i++) {
-                    const fileName = `img_${d.id}_${i}.png`;
-                    const blob     = await (await fetch(data.images[i])).blob();
-                    imgFolder.file(fileName, blob);
-                    md += `![img](images/${fileName})\n`;
+            md += `## ${title}\n\n`;
+
+            for (const d of snap.docs) {
+                const data = d.data();
+                md += `### ${data.date}\n${data.content}\n`;
+
+                if (data.images) {
+                    for (let i = 0; i < data.images.length; i++) {
+                        const fileName = `img_${type.toLowerCase()}_${d.id}_${i}.png`;
+                        const blob     = await (await fetch(data.images[i])).blob();
+                        imgFolder.file(fileName, blob);
+                        md += `![img](images/${fileName})\n`;
+                    }
                 }
-            }
 
-            md += "\n---\n\n";
+                md += "\n---\n\n";
+            }
         }
+
+        await appendBoard("BUBBLE", "BUBBLE");
+        await appendBoard("NIN", "NIN");
 
         zip.file("backup.md", md);
         const content = await zip.generateAsync({ type: "blob" });
