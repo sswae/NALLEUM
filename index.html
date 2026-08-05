@@ -659,7 +659,7 @@
 
         /* ── Hashtags ── */
         .hashtag {
-            color: #f8cf39;
+            color: #e46b22;
             font-weight: bold;
             cursor: pointer;
         }
@@ -948,15 +948,64 @@
         </div>`;
     }
 
+    // ── Local read cache ──
+    // Firestore reads cost money per document, and this app previously
+    // re-fetched an ENTIRE collection on every single page load (to support
+    // whole-history search). Since this app has exactly one writer (you),
+    // the data never changes unless YOU change it — so the cache never
+    // expires on its own. It's only cleared right after your own
+    // save/edit/delete/move actions (see refreshBoard / loadDiary(true) /
+    // movePost), which is the only time the data could actually be stale.
+    const CACHE_PREFIX = 'nalleum_cache_';
+
+    function readLocalCache(type) {
+        try {
+            const raw = localStorage.getItem(CACHE_PREFIX + type);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.docs)) return null;
+            return parsed.docs;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function writeLocalCache(type, docs) {
+        try {
+            localStorage.setItem(CACHE_PREFIX + type, JSON.stringify({ ts: Date.now(), docs }));
+        } catch (e) {
+            // storage full/unavailable — fine, just skip caching
+        }
+    }
+
+    function clearLocalCache(type) {
+        try { localStorage.removeItem(CACHE_PREFIX + type); } catch (e) {}
+    }
+
     // Fetches with automatic retry — helps when Firestore momentarily returns
     // an empty snapshot due to a flaky network / offline-cache fallback.
-    async function fetchPostsWithRetry(type, attempts = 3) {
+    // `force` skips the local cache (used right after the user's own writes,
+    // so they see their change immediately).
+    async function fetchPostsWithRetry(type, attempts = 3, force = false) {
+        if (!force) {
+            const cached = readLocalCache(type);
+            if (cached) {
+                console.log(`[nalleum] ${type}: served from local cache (0 Firestore reads), ${cached.length} posts`);
+                return cached;
+            }
+        }
+
+        console.log(`[nalleum] ${type}: fetching from Firestore${force ? ' (forced refresh)' : ' (no local cache found)'}...`);
         for (let i = 0; i < attempts; i++) {
             try {
                 const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
                 const result = await getDocs(q);
                 const docs   = result.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (docs.length > 0) return docs;
+                if (docs.length > 0) {
+                    writeLocalCache(type, docs);
+                    console.log(`[nalleum] ${type}: read ${docs.length} docs from Firestore, cached locally`);
+                    return docs;
+                }
                 if (i === attempts - 1) return { empty: true, docs: [] };
             } catch (e) {
                 console.error(`fetch ${type} attempt ${i + 1} failed`, e);
@@ -969,7 +1018,10 @@
 
     async function loadPosts(type, page = 1, opts = {}) {
         const scroll = opts.scroll !== false;
+        const force  = opts.force === true;
         if (!window.fbAllPosts) window.fbAllPosts = {};
+
+        if (force) delete window.fbAllPosts[type];
 
         if (page === 1 || !window.fbAllPosts[type]) {
             const listEl = document.getElementById(type.toLowerCase() + '-list');
@@ -977,7 +1029,7 @@
 
             let result;
             try {
-                result = await fetchPostsWithRetry(type);
+                result = await fetchPostsWithRetry(type, 3, force);
             } catch (e) {
                 if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',1)`);
                 return;
@@ -1011,11 +1063,14 @@
 
     // Reload a board's data in place — keeps the user on their current page
     // and preserves any active search/img-filter view, instead of forcing
-    // them back to page 1. Used after edit/delete/save.
+    // them back to page 1. Used after edit/delete/save. Always bypasses the
+    // local cache (force) so the user's own change shows up right away, and
+    // re-caches the fresh result for subsequent loads.
     async function refreshBoard(type) {
+        clearLocalCache(type);
         if (window.fbAllPosts) delete window.fbAllPosts[type];
         const page = window.currentPage[type] || 1;
-        await loadPosts(type, page, { scroll: false });
+        await loadPosts(type, page, { scroll: false, force: true });
     }
 
     function renderPagination(type, current, total) {
@@ -1054,24 +1109,45 @@
         `;
     }
 
-    async function loadDiary() {
+    async function loadDiary(force = false) {
         const listEl = document.getElementById('diary-list');
         if (!window.diaryPosts) {
             listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">LOADING...</div>`;
         }
+
+        if (!force) {
+            const cached = readLocalCache('DIARY');
+            if (cached) {
+                console.log(`[nalleum] DIARY: served from local cache (0 Firestore reads), ${cached.length} posts`);
+                window.diaryPosts = cached;
+                window.renderBoard('DIARY');
+                return;
+            }
+        } else {
+            clearLocalCache('DIARY');
+        }
+
+        console.log(`[nalleum] DIARY: fetching from Firestore${force ? ' (forced refresh)' : ' (no local cache found)'}...`);
         try {
             for (let i = 0; i < 3; i++) {
                 const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
                 const snap = await getDocs(q);
                 const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (docs.length > 0 || i === 2) { window.diaryPosts = docs; break; }
+                if (docs.length > 0 || i === 2) {
+                    window.diaryPosts = docs;
+                    if (docs.length > 0) {
+                        writeLocalCache('DIARY', docs);
+                        console.log(`[nalleum] DIARY: read ${docs.length} docs from Firestore, cached locally`);
+                    }
+                    break;
+                }
                 await new Promise(r => setTimeout(r, 500 * (i + 1)));
             }
         } catch (e) {
             console.error('loadDiary failed', e);
             listEl.innerHTML = `<div style="color:#fffac1; text-align:center; padding:20px; font-size:10px;">
                 LOAD FAILED.<br><br>
-                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary()">💣 RETRY</span>
+                <span style="text-decoration:underline; cursor:pointer; color:#f8cf39;" onclick="window.loadDiary(true)">💣 RETRY</span>
             </div>`;
             return;
         }
@@ -1101,6 +1177,7 @@
     window.loadDiary      = loadDiary;
     window.renderPagination = renderPagination;
     window.refreshBoard   = refreshBoard;
+    window.clearLocalCache = clearLocalCache;
 </script>
 
 <!-- App Logic -->
@@ -1492,8 +1569,9 @@
                 if (wasEdit) {
                     await window.refreshBoard(type);
                 } else {
+                    window.clearLocalCache(type);
                     if (window.fbAllPosts) delete window.fbAllPosts[type];
-                    window.loadPosts(type, 1);
+                    window.loadPosts(type, 1, { force: true });
                 }
             } else {
                 const title   = document.getElementById('diaryTitleInput').value || "NO TITLE";
@@ -1507,7 +1585,7 @@
                     await addDoc(collection(window.db, "DIARY"), { title, content, images: imageUrls, date, createdAt: Date.now() });
                 }
                 closeDiaryEditor();
-                window.loadDiary();
+                window.loadDiary(true);
             }
 
             tempImages.forEach(url => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); });
@@ -1594,9 +1672,11 @@
                 delete window.fbAllPosts[fromType];
                 delete window.fbAllPosts[toType];
             }
+            window.clearLocalCache(fromType);
+            window.clearLocalCache(toType);
             const fromPage = window.currentPage[fromType] || 1;
-            window.loadPosts(fromType, fromPage, { scroll: false });
-            window.loadPosts(toType, 1, { scroll: false });
+            window.loadPosts(fromType, fromPage, { scroll: false, force: true });
+            window.loadPosts(toType, 1, { scroll: false, force: true });
         } catch(e) {
             console.error(e);
             alert('이동 실패!');
@@ -1625,7 +1705,7 @@
                     } catch (e) {}
                 }
             }
-            if (type === 'DIARY') { closeDiaryDetail(); window.loadDiary(); }
+            if (type === 'DIARY') { closeDiaryDetail(); window.loadDiary(true); }
             else {
                 await window.refreshBoard(type);
             }
