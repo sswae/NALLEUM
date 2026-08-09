@@ -618,7 +618,7 @@
         .search-count {
             font-family: 'Press Start 2P';
             font-size: 8px;
-            color: #e8c568;
+            color: #8a4a4a;
             text-align: right;
             margin-bottom: 10px;
             min-height: 14px;
@@ -708,7 +708,7 @@
             display: inline-block;
             text-decoration: underline;
             cursor: pointer;
-            color: #e8c568;
+            color: #8a4a4a;
         }
 
         /* ── Animations ── */
@@ -786,7 +786,7 @@
             </div>
         </div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🎏 IMG ONLY</span>
+            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🥷 IMG ONLY</span>
             <span id="bubble-hashtag-badge"></span>
         </div>
         <div class="search-count" id="bubble-search-count"></div>
@@ -806,7 +806,7 @@
             </div>
         </div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🖼 IMG ONLY</span>
+            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🥷 IMG ONLY</span>
             <span id="nin-hashtag-badge"></span>
         </div>
         <div class="search-count" id="nin-search-count"></div>
@@ -826,7 +826,7 @@
             </div>
         </div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🖼 IMG ONLY</span>
+            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🥷 IMG ONLY</span>
             <span id="neg-hashtag-badge"></span>
         </div>
         <div class="search-count" id="neg-search-count"></div>
@@ -1150,7 +1150,7 @@
             console.error('loadDiary failed', e);
             listEl.innerHTML = `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">
                 LOAD FAILED.<br><br>
-                <span style="text-decoration:underline; cursor:pointer; color:#e8c568;" onclick="window.loadDiary(true)">💣 RETRY</span>
+                <span style="text-decoration:underline; cursor:pointer; color:#8a4a4a;" onclick="window.loadDiary(true)">💣 RETRY</span>
             </div>`;
             return;
         }
