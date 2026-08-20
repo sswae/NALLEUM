@@ -685,6 +685,34 @@
         }
         .hashtag-badge-clear:hover { opacity: 1; }
 
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 10px 0;
+        }
+        .tag-cloud:empty { margin: 0; }
+        .tag-cloud-item {
+            background: none;
+            border: 1px solid #3d2b1f;
+            border-radius: 12px;
+            padding: 3px 9px;
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            color: #3d2b1f;
+            cursor: pointer;
+            opacity: 0.75;
+            transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
+        }
+        .tag-cloud-item:hover { opacity: 1; }
+        .tag-cloud-item:active { transform: scale(0.94); }
+        .tag-cloud-item.active {
+            background-color: #c9a548;
+            border-color: #c9a548;
+            color: #f3e8c8;
+            opacity: 1;
+        }
+
         /* ── Arcade Loading / Error Text ── */
         .bounce-letter {
             display: inline-block;
@@ -785,6 +813,7 @@
                 <button id="bubbleSendBtn" class="btn-pixel" onclick="savePost('BUBBLE')">SEND</button>
             </div>
         </div>
+        <div class="tag-cloud" id="bubble-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🥷 IMG ONLY</span>
             <span id="bubble-hashtag-badge"></span>
@@ -805,6 +834,7 @@
                 <button id="ninSendBtn" class="btn-pixel" onclick="savePost('NIN')">SEND</button>
             </div>
         </div>
+        <div class="tag-cloud" id="nin-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🥷 IMG ONLY</span>
             <span id="nin-hashtag-badge"></span>
@@ -825,6 +855,7 @@
                 <button id="negSendBtn" class="btn-pixel" onclick="savePost('NEG')">SEND</button>
             </div>
         </div>
+        <div class="tag-cloud" id="neg-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🥷 IMG ONLY</span>
             <span id="neg-hashtag-badge"></span>
@@ -1334,6 +1365,8 @@
                 : '';
         }
 
+        renderTagCloud(type);
+
         if (posts.length === 0 && (kw || onlyImages || activeTag)) {
             container.innerHTML = `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">
                 ${activeTag ? 'NO POSTS WITH THIS TAG.' : (onlyImages && !kw ? 'NO IMAGE POSTS.' : 'NO RESULTS.')}
@@ -1361,6 +1394,36 @@
     }
 
     // ── Hashtag filter (scoped to a single board) ──
+    function extractHashtags(text) {
+        const matches = (text || '').match(/(^|[\s>])(#[\p{L}\p{N}_]+)/gu) || [];
+        return matches.map(m => m.replace(/^[\s>]/, ''));
+    }
+
+    function renderTagCloud(type) {
+        const el = document.getElementById(type.toLowerCase() + '-tag-cloud');
+        if (!el) return;
+
+        const posts = (window.fbAllPosts && window.fbAllPosts[type]) || [];
+        const counts = {};
+        posts.forEach(p => {
+            extractHashtags(p.content).forEach(tag => {
+                counts[tag] = (counts[tag] || 0) + 1;
+            });
+        });
+
+        const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+        const activeTag = window.hashtagFilter[type];
+
+        if (tags.length === 0) { el.innerHTML = ''; return; }
+
+        el.innerHTML = tags.map(tag => `
+            <span class="tag-cloud-item ${tag === activeTag ? 'active' : ''}"
+                  onclick="${tag === activeTag ? `clearHashtagFilter('${type}')` : `filterByHashtag('${type}', '${tag.replace(/'/g, "\\'")}')`}">
+                ${tag} <span style="opacity:0.6;">${counts[tag]}</span>
+            </span>
+        `).join('');
+    }
+
     function filterByHashtag(type, tag) {
         window.hashtagFilter[type] = tag;
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
