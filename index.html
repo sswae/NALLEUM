@@ -806,6 +806,8 @@
     <div id="bubble-container">
         <div class="editor-box" id="bubble-editor-box">
             <textarea id="bubble-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+            <!-- 해시태그선택 -->
+            <div id="bubble-insert-tags" class="tag-cloud" style="margin-top: 10px; border-top: 1px dashed rgba(61, 43, 31, 0.3); padding-top: 10px;"></div>
             <div id="bubble-previews" class="preview-container"></div>
             <div class="editor-controls">
                 <input type="file" id="bubbleFile" multiple accept="image/*" onchange="handleImg(this, 'BUBBLE')" style="display:none">
@@ -827,6 +829,8 @@
     <div id="nin-container" style="display:none">
         <div class="editor-box" id="nin-editor-box">
             <textarea id="nin-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+            <!-- 해시태그선택 -->
+            <div id="nin-insert-tags" class="tag-cloud" style="margin-top: 10px; border-top: 1px dashed rgba(61, 43, 31, 0.3); padding-top: 10px;"></div>
             <div id="nin-previews" class="preview-container"></div>
             <div class="editor-controls">
                 <input type="file" id="ninFile" multiple accept="image/*" onchange="handleImg(this, 'NIN')" style="display:none">
@@ -848,6 +852,8 @@
     <div id="neg-container" style="display:none">
         <div class="editor-box" id="neg-editor-box">
             <textarea id="neg-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+            <!-- 해시태그선택 -->
+            <div id="neg-insert-tags" class="tag-cloud" style="margin-top: 10px; border-top: 1px dashed rgba(61, 43, 31, 0.3); padding-top: 10px;"></div>
             <div id="neg-previews" class="preview-container"></div>
             <div class="editor-controls">
                 <input type="file" id="negFile" multiple accept="image/*" onchange="handleImg(this, 'NEG')" style="display:none">
@@ -1399,30 +1405,61 @@
         return matches.map(m => m.replace(/^[\s>]/, ''));
     }
 
-    function renderTagCloud(type) {
-        const el = document.getElementById(type.toLowerCase() + '-tag-cloud');
-        if (!el) return;
+    // 새로 추가할 텍스트 삽입 함수
+function insertHashtag(type, tag) {
+    const textarea = document.getElementById(type.toLowerCase() + '-text');
+    if (!textarea) return;
+    
+    const val = textarea.value;
+    const needsSpace = val.length > 0 && !val.endsWith(' ') && !val.endsWith('\n');
+    
+    textarea.value = val + (needsSpace ? ' ' : '') + tag + ' ';
+    textarea.focus();
+}
 
-        const posts = (window.fbAllPosts && window.fbAllPosts[type]) || [];
-        const counts = {};
-        posts.forEach(p => {
-            extractHashtags(p.content).forEach(tag => {
-                counts[tag] = (counts[tag] || 0) + 1;
-            });
+// 기존 함수를 대체할 새로운 renderTagCloud 함수
+function renderTagCloud(type) {
+    const el = document.getElementById(type.toLowerCase() + '-tag-cloud');
+    const insertEl = document.getElementById(type.toLowerCase() + '-insert-tags');
+    
+    if (!el && !insertEl) return;
+
+    const posts = (window.fbAllPosts && window.fbAllPosts[type]) || [];
+    const counts = {};
+    posts.forEach(p => {
+        extractHashtags(p.content).forEach(tag => {
+            counts[tag] = (counts[tag] || 0) + 1;
         });
+    });
 
-        const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
-        const activeTag = window.hashtagFilter[type];
+    const tags = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b));
+    const activeTag = window.hashtagFilter[type];
 
-        if (tags.length === 0) { el.innerHTML = ''; return; }
-
-        el.innerHTML = tags.map(tag => `
-            <span class="tag-cloud-item ${tag === activeTag ? 'active' : ''}"
-                  onclick="${tag === activeTag ? `clearHashtagFilter('${type}')` : `filterByHashtag('${type}', '${tag.replace(/'/g, "\\'")}')`}">
-                ${tag} <span style="opacity:0.6;">${counts[tag]}</span>
-            </span>
-        `).join('');
+    // 1. 하단의 검색/필터용 태그 클라우드 (기존 기능 유지)
+    if (el) {
+        if (tags.length === 0) { el.innerHTML = ''; }
+        else {
+            el.innerHTML = tags.map(tag => `
+                <span class="tag-cloud-item ${tag === activeTag ? 'active' : ''}"
+                      onclick="${tag === activeTag ? `clearHashtagFilter('${type}')` : `filterByHashtag('${type}', '${tag.replace(/'/g, "\\'")}')`}">
+                    ${tag} <span style="opacity:0.6;">${counts[tag]}</span>
+                </span>
+            `).join('');
+        }
     }
+
+    // 2. 글쓰기 에디터 하단의 태그 삽입용 버튼 목록 (새로 추가된 기능)
+    if (insertEl) {
+        if (tags.length === 0) { insertEl.innerHTML = ''; }
+        else {
+            insertEl.innerHTML = tags.map(tag => `
+                <span class="tag-cloud-item" onclick="insertHashtag('${type}', '${tag.replace(/'/g, "\\'")}')">
+                    + ${tag}
+                </span>
+            `).join('');
+        }
+    }
+}
 
     function filterByHashtag(type, tag) {
         window.hashtagFilter[type] = tag;
