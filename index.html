@@ -659,6 +659,53 @@
             opacity: 1;
         }
 
+        /* ── Multi-select move ── */
+        .post-select-checkbox {
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            accent-color: #8a4a4a;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .post-item.selected {
+            background-color: rgba(138, 74, 74, 0.12);
+        }
+
+        .bulk-move-bar {
+            position: fixed;
+            left: 50%;
+            bottom: 14px;
+            transform: translateX(-50%);
+            z-index: 950;
+            width: calc(100% - 28px);
+            max-width: 452px;
+            background-color: #3d2b1f;
+            color: #f3e8c8;
+            border: 2px solid #000;
+            border-bottom-width: 4px;
+            border-radius: 8px;
+            padding: 10px 12px;
+            align-items: center;
+            justify-content: space-between;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            gap: 10px;
+        }
+
+        .bulk-move-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .bulk-move-btn {
+            padding: 6px 10px;
+            font-size: 8px;
+            border-bottom-width: 3px;
+        }
+
         /* ── Hashtags ── */
         .hashtag {
             color: #4c6b4f;
@@ -817,6 +864,7 @@
         <div class="tag-cloud" id="bubble-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🥷 IMG ONLY</span>
+            <span class="img-filter-btn" id="bubble-select-toggle" onclick="toggleSelectMode('BUBBLE')">☑ SELECT</span>
             <span id="bubble-hashtag-badge"></span>
         </div>
         <div class="search-count" id="bubble-search-count"></div>
@@ -840,6 +888,7 @@
         <div class="tag-cloud" id="nin-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🥷 IMG ONLY</span>
+            <span class="img-filter-btn" id="nin-select-toggle" onclick="toggleSelectMode('NIN')">☑ SELECT</span>
             <span id="nin-hashtag-badge"></span>
         </div>
         <div class="search-count" id="nin-search-count"></div>
@@ -863,6 +912,7 @@
         <div class="tag-cloud" id="neg-tag-cloud"></div>
         <div class="filter-bar">
             <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🥷 IMG ONLY</span>
+            <span class="img-filter-btn" id="neg-select-toggle" onclick="toggleSelectMode('NEG')">☑ SELECT</span>
             <span id="neg-hashtag-badge"></span>
         </div>
         <div class="search-count" id="neg-search-count"></div>
@@ -916,6 +966,14 @@
 </div>
 
 <button id="topBtn" onclick="scrollToTop()" aria-label="맨 위로">TOP</button>
+
+<div id="bulkMoveBar" class="bulk-move-bar" style="display:none;">
+    <span id="bulkMoveCount">0개 선택됨</span>
+    <div class="bulk-move-actions">
+        <span class="btn-pixel bulk-move-btn" onclick="openBulkMovePopup(this)">MOVE</span>
+        <span class="btn-pixel bulk-move-btn" style="background:#8a4a4a" onclick="cancelSelectMode()">CANCEL</span>
+    </div>
+</div>
 
 <div id="imgModal">
     <span id="modalPrev" onclick="event.stopPropagation(); modalNav(-1)">&#10094;</span>
@@ -1322,6 +1380,7 @@
 
     // ── Tab switching ──
     function switchTab(tab) {
+        if (window.currentSelectType && window.currentSelectType !== tab) cancelSelectMode();
         ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => {
             document.getElementById('tab' + t.charAt(0) + t.slice(1).toLowerCase()).classList.toggle('active', t === tab);
             document.getElementById(t.toLowerCase() + '-container').style.display = (t === tab) ? 'block' : 'none';
@@ -1334,6 +1393,9 @@
     window.searchQuery = '';
     window.imgFilter = { BUBBLE: false, NIN: false, NEG: false };
     window.hashtagFilter = { BUBBLE: null, NIN: null, NEG: null };
+    window.selectMode = { BUBBLE: false, NIN: false, NEG: false };
+    window.selectedPosts = { BUBBLE: new Set(), NIN: new Set(), NEG: new Set() };
+    window.currentSelectType = null;
 
     async function toggleImgFilter(type) {
         window.imgFilter[type] = !window.imgFilter[type];
@@ -1466,9 +1528,14 @@
             return;
         }
 
-        container.innerHTML = posts.map(p => `
-            <div class="post-item" data-id="${p.id}" data-type="${type}">
+        const selecting = window.selectMode[type];
+
+        container.innerHTML = posts.map(p => {
+            const isSelected = selecting && window.selectedPosts[type].has(p.id);
+            return `
+            <div class="post-item${isSelected ? ' selected' : ''}" data-id="${p.id}" data-type="${type}">
                 <div class="post-actions">
+                    ${selecting ? `<input type="checkbox" class="post-select-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); togglePostSelect('${type}', '${p.id}', this)">` : ''}
                     <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
                     <span onclick="movePostFromEl(this)">MOVE</span>
                     <span onclick="deletePostFromEl(this)">DEL</span>
@@ -1482,7 +1549,8 @@
                     ).join('')}
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     // ── Hashtag filter (scoped to a single board) ──
@@ -1854,6 +1922,114 @@ function renderTagCloud(type) {
                 }
             });
         }, 0);
+    }
+
+    // ── Multi-select move ──
+    function toggleSelectMode(type) {
+        window.selectMode[type] = !window.selectMode[type];
+        window.selectedPosts[type] = new Set();
+        window.currentSelectType = window.selectMode[type] ? type : null;
+
+        const btn = document.getElementById(type.toLowerCase() + '-select-toggle');
+        if (btn) btn.classList.toggle('active', window.selectMode[type]);
+
+        updateBulkMoveBar(type);
+        renderBoard(type);
+    }
+
+    function togglePostSelect(type, id, checkboxEl) {
+        const set = window.selectedPosts[type];
+        if (set.has(id)) set.delete(id); else set.add(id);
+
+        const item = checkboxEl.closest('.post-item');
+        if (item) item.classList.toggle('selected', set.has(id));
+
+        updateBulkMoveBar(type);
+    }
+
+    function updateBulkMoveBar(type) {
+        const bar     = document.getElementById('bulkMoveBar');
+        const countEl = document.getElementById('bulkMoveCount');
+        if (!bar || !countEl) return;
+
+        if (!window.selectMode[type]) {
+            bar.style.display = 'none';
+            return;
+        }
+        countEl.innerText = `${window.selectedPosts[type].size}개 선택됨`;
+        bar.style.display = 'flex';
+    }
+
+    function cancelSelectMode() {
+        const type = window.currentSelectType;
+        if (!type) return;
+
+        window.selectMode[type] = false;
+        window.selectedPosts[type] = new Set();
+        window.currentSelectType = null;
+
+        const btn = document.getElementById(type.toLowerCase() + '-select-toggle');
+        if (btn) btn.classList.remove('active');
+
+        const bar = document.getElementById('bulkMoveBar');
+        if (bar) bar.style.display = 'none';
+
+        renderBoard(type);
+    }
+
+    function openBulkMovePopup(el) {
+        const type = window.currentSelectType;
+        if (!type) return;
+
+        const ids = Array.from(window.selectedPosts[type]);
+        if (ids.length === 0) { alert('이동할 글을 먼저 선택해주세요.'); return; }
+
+        const targets = ALL_BOARDS.filter(t => t !== type);
+        openMoveTargetPopup(el, targets, (toType) => {
+            bulkMovePosts(type, toType, ids);
+        });
+    }
+
+    async function bulkMovePosts(fromType, toType, ids) {
+        const { addDoc, collection, doc, deleteDoc } = window.fbActions;
+        const cache = (window.fbAllPosts && window.fbAllPosts[fromType]) || window[fromType.toLowerCase() + 'Posts'] || [];
+
+        const countEl = document.getElementById('bulkMoveCount');
+        let moved = 0, failed = 0;
+
+        for (const id of ids) {
+            const post = cache.find(p => p.id === id);
+            if (!post) { failed++; continue; }
+            try {
+                await addDoc(collection(window.db, toType), {
+                    content:   post.content,
+                    images:    post.images || [],
+                    date:      post.date,
+                    createdAt: post.createdAt || Date.now()
+                });
+                await deleteDoc(doc(window.db, fromType, id));
+                moved++;
+            } catch (e) {
+                console.error(e);
+                failed++;
+            }
+            if (countEl) countEl.innerText = `이동 중... ${moved + failed}/${ids.length}`;
+        }
+
+        if (window.fbAllPosts) {
+            delete window.fbAllPosts[fromType];
+            delete window.fbAllPosts[toType];
+        }
+        window.clearLocalCache(fromType);
+        window.clearLocalCache(toType);
+
+        cancelSelectMode();
+
+        const fromPage = window.currentPage[fromType] || 1;
+        await window.loadPosts(fromType, fromPage, { scroll: false, force: true });
+        await window.loadPosts(toType, 1, { scroll: false, force: true });
+
+        if (failed > 0) alert(`${moved}개 이동 완료, ${failed}개는 실패했어요.`);
     }
 
     async function movePost(fromType, toType, id, images) {
