@@ -831,9 +831,9 @@
         <div class="header-row">
             <span class="backup-text" onclick="backupToMarkdown()">🍡REPORT</span>
             <div style="display:flex; align-items:center; gap:8px;">
+                <button id="saveBtn" class="music-btn" onclick="window.flushPendingOps()" title="지금 저장">SAVED</button>
                 <div id="star" style="font-size:20px;">🍥</div>
                 <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
-                <button id="saveBtn" class="music-btn" onclick="window.flushPendingOps()" title="지금 저장">SAVED</button>
             </div>
         </div>
 
@@ -1257,19 +1257,6 @@
         BOARD_TYPES.forEach(t => { if (window.renderBoard) window.renderBoard(t); });
         updateSyncIndicator();
     }
-
-    // ── When to flush ──
-    // Tab hidden (switched app, minimized, phone locked) is the most
-    // reliable "leaving" signal browsers give us, so that's the primary
-    // trigger. pagehide covers actual navigation/close. Neither is 100%
-    // guaranteed (the OS can kill a background tab outright), so a 30s
-    // interval acts as a safety net, and anything still unsent gets
-    // retried at the very start of the next session.
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) flushPendingOps();
-    });
-    window.addEventListener('pagehide', () => { flushPendingOps(); });
-    setInterval(() => { if (pendingCount() > 0) flushPendingOps(); }, 600000);
 
     // ── Pagination — now pure client-side slicing, zero reads per page turn ──
     function renderPagination(type, current, total) {
