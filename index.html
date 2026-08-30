@@ -962,7 +962,7 @@
         ref, uploadBytes, getDownloadURL,
         addDoc, collection, getDocs, query, orderBy,
         doc, deleteDoc, updateDoc, deleteObject,
-        getCountFromServer, limit
+        getCountFromServer, limit, startAfter
     };
 
     // ── Pagination state ──
@@ -987,14 +987,14 @@
         </div>`;
     }
 
-    // ── Local read cache ──
-    // Firestore reads cost money per document, and this app previously
-    // re-fetched an ENTIRE collection on every single page load (to support
-    // whole-history search). Since this app has exactly one writer (you),
-    // the data never changes unless YOU change it — so the cache never
-    // expires on its own. It's only cleared right after your own
-    // save/edit/delete/move actions (see refreshBoard / loadDiary(true) /
-    // movePost), which is the only time the data could actually be stale.
+    // ── Local full-history cache ──
+    // Used ONLY by features that need the whole board's history: search,
+    // the image-only filter, hashtag filtering, and the tag-cloud/insert
+    // list under the editor. Normal page-by-page browsing does NOT use
+    // this anymore (see fetchPagePosts below) — that's what made every
+    // single page load read an entire collection before. Since this app
+    // has exactly one writer (you), this cache never expires on its own;
+    // it's only cleared right after your own save/edit/delete/move.
     const CACHE_PREFIX = 'nalleum_cache_';
 
     function readLocalCache(type) {
@@ -1013,7 +1013,7 @@
         try {
             localStorage.setItem(CACHE_PREFIX + type, JSON.stringify({ ts: Date.now(), docs }));
         } catch (e) {
-            // storage full/unavailable — fine, just skip caching
+            console.warn(`[nalleum] could not cache ${type} locally (storage full?) — will refetch every time this is needed`, e);
         }
     }
 
@@ -1021,95 +1021,165 @@
         try { localStorage.removeItem(CACHE_PREFIX + type); } catch (e) {}
     }
 
-    // Fetches with automatic retry — helps when Firestore momentarily returns
-    // an empty snapshot due to a flaky network / offline-cache fallback.
-    // `force` skips the local cache (used right after the user's own writes,
-    // so they see their change immediately).
-    async function fetchPostsWithRetry(type, attempts = 3, force = false) {
+    // Populates window.fbAllPosts[type] with the ENTIRE board history.
+    // Lazy: only called by search/img-filter/hashtag-filter/tag-cloud, never
+    // by normal page browsing. Silent on failure (no LOAD FAILED banner) —
+    // these are enhancements, not core content, so we degrade quietly.
+    async function ensureFullCache(type, force = false) {
+        if (!window.fbAllPosts) window.fbAllPosts = {};
+        if (!force && window.fbAllPosts[type]) return window.fbAllPosts[type];
+
+        if (force) clearLocalCache(type);
+
         if (!force) {
             const cached = readLocalCache(type);
             if (cached) {
-                console.log(`[nalleum] ${type}: served from local cache (0 Firestore reads), ${cached.length} posts`);
+                console.log(`[nalleum] ${type}: full-history served from local cache (0 Firestore reads), ${cached.length} posts`);
+                window.fbAllPosts[type] = cached;
                 return cached;
             }
         }
 
-        console.log(`[nalleum] ${type}: fetching from Firestore${force ? ' (forced refresh)' : ' (no local cache found)'}...`);
-        for (let i = 0; i < attempts; i++) {
-            try {
-                const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
-                const result = await getDocs(q);
-                const docs   = result.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (docs.length > 0) {
-                    writeLocalCache(type, docs);
-                    console.log(`[nalleum] ${type}: read ${docs.length} docs from Firestore, cached locally`);
-                    return docs;
-                }
-                if (i === attempts - 1) return { empty: true, docs: [] };
-            } catch (e) {
-                console.error(`fetch ${type} attempt ${i + 1} failed`, e);
-                if (i === attempts - 1) throw e;
-            }
-            await new Promise(r => setTimeout(r, 500 * (i + 1))); // backoff
+        console.log(`[nalleum] ${type}: reading full history from Firestore${force ? ' (forced refresh)' : ' (no local cache found)'}...`);
+        try {
+            const q      = query(collection(window.db, type), orderBy("createdAt", "desc"));
+            const result = await getDocs(q);
+            const docs   = result.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.fbAllPosts[type] = docs;
+            if (docs.length > 0) writeLocalCache(type, docs);
+            console.log(`[nalleum] ${type}: read ${docs.length} docs from Firestore (full history)`);
+            return docs;
+        } catch (e) {
+            console.error(`[nalleum] ${type}: full-history fetch failed`, e);
+            return null;
         }
-        return { empty: true, docs: [] };
+    }
+
+    // ── Lightweight paginated fetch for normal browsing ──
+    // This is the actual fix for "every load reads everything": normal
+    // page views now read only the ~20 posts they show, via a real
+    // Firestore query (limit + startAfter), plus one cheap count query.
+    window.boardCount     = {};              // type -> total doc count
+    window.pageCursorCache = { BUBBLE: {}, NIN: {}, NEG: {} }; // type -> { page: lastDocSnapshot }
+
+    async function getBoardCount(type, force = false) {
+        if (!force && window.boardCount[type] != null) return window.boardCount[type];
+        const snap = await getCountFromServer(collection(window.db, type));
+        window.boardCount[type] = snap.data().count;
+        return window.boardCount[type];
+    }
+
+    // Fetches exactly one page (POSTS_PER_PAGE docs) from Firestore.
+    // Walks forward from the nearest cached cursor when jumping ahead —
+    // still far cheaper than reading the whole collection, and pages
+    // visited via PREV/NEXT (the common case) cost exactly POSTS_PER_PAGE
+    // reads each, no more.
+    async function fetchPagePosts(type, page) {
+        const cursors = window.pageCursorCache[type];
+
+        if (page === 1) {
+            const q      = query(collection(window.db, type), orderBy("createdAt", "desc"), limit(POSTS_PER_PAGE));
+            const result = await getDocs(q);
+            cursors[1] = result.docs[result.docs.length - 1] || null;
+            return result.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        // find the closest cached cursor at or before `page - 1`, walk forward from there
+        let fromPage = 1;
+        for (let p = page - 1; p >= 1; p--) {
+            if (cursors[p]) { fromPage = p; break; }
+        }
+
+        let lastDoc = fromPage === 1 ? null : cursors[fromPage];
+        for (let p = fromPage; p < page; p++) {
+            const q = lastDoc
+                ? query(collection(window.db, type), orderBy("createdAt", "desc"), startAfter(lastDoc), limit(POSTS_PER_PAGE))
+                : query(collection(window.db, type), orderBy("createdAt", "desc"), limit(POSTS_PER_PAGE));
+            const result = await getDocs(q);
+            lastDoc = result.docs[result.docs.length - 1] || lastDoc;
+            cursors[p + 1] = lastDoc;
+            if (p + 1 === page) {
+                return result.docs.map(d => ({ id: d.id, ...d.data() }));
+            }
+        }
+        return [];
+    }
+
+    function invalidatePagination(type) {
+        window.pageCursorCache[type] = {};
+        delete window.boardCount[type];
     }
 
     async function loadPosts(type, page = 1, opts = {}) {
         const scroll = opts.scroll !== false;
         const force  = opts.force === true;
-        if (!window.fbAllPosts) window.fbAllPosts = {};
 
-        if (force) delete window.fbAllPosts[type];
+        const filtered = window.searchQuery || window.imgFilter[type] || window.hashtagFilter[type];
 
-        if (page === 1 || !window.fbAllPosts[type]) {
+        if (filtered) {
+            // search / img-only / hashtag view — needs full history
             const listEl = document.getElementById(type.toLowerCase() + '-list');
-            if (listEl) listEl.innerHTML = loadingHTML();
-
-            let result;
-            try {
-                result = await fetchPostsWithRetry(type, 3, force);
-            } catch (e) {
+            const data = await ensureFullCache(type, force);
+            if (data === null) {
                 if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',1)`);
                 return;
             }
-
-            // Still empty after retries: treat as a soft failure too — surface
-            // a retry option rather than silently showing nothing, since we
-            // can't distinguish "genuinely no posts" from a flaky fetch.
-            if (result && result.empty && !window.fbAllPosts[type]) {
-                if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',1)`);
-                return;
-            }
-
-            window.fbAllPosts[type] = Array.isArray(result) ? result : result.docs;
+            window.currentPage[type] = 1;
+            window.renderBoard(type);
+            const pg = document.getElementById(type.toLowerCase() + '-pagination');
+            if (pg) pg.style.display = 'none';
+            if (scroll) window.scrollTo(0, 0);
+            return;
         }
 
-        const all   = window.fbAllPosts[type];
-        const total = Math.ceil(all.length / POSTS_PER_PAGE) || 1;
-        const start = (page - 1) * POSTS_PER_PAGE;
-        window[type.toLowerCase() + 'Posts'] = all.slice(start, start + POSTS_PER_PAGE);
+        // normal browsing — cheap, page-sized reads only
+        if (force) invalidatePagination(type);
+
+        const listEl = document.getElementById(type.toLowerCase() + '-list');
+        if (listEl) listEl.innerHTML = loadingHTML();
+
+        let posts, total;
+        try {
+            const [pagePosts, count] = await Promise.all([
+                fetchPagePosts(type, page),
+                getBoardCount(type, force)
+            ]);
+            posts = pagePosts;
+            total = Math.ceil(count / POSTS_PER_PAGE) || 1;
+        } catch (e) {
+            console.error(`[nalleum] ${type}: page ${page} fetch failed`, e);
+            if (listEl) listEl.innerHTML = failHTML(`window.loadPosts('${type}',${page})`);
+            return;
+        }
+
+        window[type.toLowerCase() + 'Posts'] = posts;
         window.currentPage[type] = page;
 
-        // pagination stays hidden while search/img-filter is active
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
-        if (pg) pg.style.display = (window.searchQuery || window.imgFilter[type]) ? 'none' : 'flex';
+        if (pg) pg.style.display = 'flex';
 
         window.renderBoard(type);
         renderPagination(type, page, total);
         if (scroll) window.scrollTo(0, 0);
     }
 
-    // Reload a board's data in place — keeps the user on their current page
-    // and preserves any active search/img-filter view, instead of forcing
-    // them back to page 1. Used after edit/delete/save. Always bypasses the
-    // local cache (force) so the user's own change shows up right away, and
-    // re-caches the fresh result for subsequent loads.
+    // Reload a board's data in place after the user's own write — keeps
+    // them on their current page. Cheap: only re-reads that one page
+    // (not the whole collection). Also invalidates the full-history cache
+    // so search/filter/tag-cloud pick up the change next time they run.
     async function refreshBoard(type) {
         clearLocalCache(type);
         if (window.fbAllPosts) delete window.fbAllPosts[type];
-        const page = window.currentPage[type] || 1;
-        await loadPosts(type, page, { scroll: false, force: true });
+        invalidatePagination(type);
+
+        const filtered = window.searchQuery || window.imgFilter[type] || window.hashtagFilter[type];
+        if (filtered) {
+            await ensureFullCache(type, true);
+            window.renderBoard(type);
+        } else {
+            const page = window.currentPage[type] || 1;
+            await loadPosts(type, page, { scroll: false, force: true });
+        }
     }
 
     function renderPagination(type, current, total) {
@@ -1148,6 +1218,9 @@
         `;
     }
 
+    // DIARY is small in practice, so it stays simple: always fully
+    // loaded (same local-cache-first strategy as the full-history cache
+    // above), no separate pagination path needed.
     async function loadDiary(force = false) {
         const listEl = document.getElementById('diary-list');
         if (!window.diaryPosts) {
@@ -1168,19 +1241,13 @@
 
         console.log(`[nalleum] DIARY: fetching from Firestore${force ? ' (forced refresh)' : ' (no local cache found)'}...`);
         try {
-            for (let i = 0; i < 3; i++) {
-                const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
-                const snap = await getDocs(q);
-                const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (docs.length > 0 || i === 2) {
-                    window.diaryPosts = docs;
-                    if (docs.length > 0) {
-                        writeLocalCache('DIARY', docs);
-                        console.log(`[nalleum] DIARY: read ${docs.length} docs from Firestore, cached locally`);
-                    }
-                    break;
-                }
-                await new Promise(r => setTimeout(r, 500 * (i + 1)));
+            const q    = query(collection(window.db, 'DIARY'), orderBy("createdAt", "desc"));
+            const snap = await getDocs(q);
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.diaryPosts = docs;
+            if (docs.length > 0) {
+                writeLocalCache('DIARY', docs);
+                console.log(`[nalleum] DIARY: read ${docs.length} docs from Firestore, cached locally`);
             }
         } catch (e) {
             console.error('loadDiary failed', e);
@@ -1192,6 +1259,7 @@
         }
         window.renderBoard('DIARY');
     }
+
 
     function waitForRenderBoard() {
         return new Promise(resolve => {
@@ -1217,6 +1285,7 @@
     window.renderPagination = renderPagination;
     window.refreshBoard   = refreshBoard;
     window.clearLocalCache = clearLocalCache;
+    window.ensureFullCache = ensureFullCache;
 </script>
 
 <!-- App Logic -->
@@ -1266,29 +1335,45 @@
     window.imgFilter = { BUBBLE: false, NIN: false, NEG: false };
     window.hashtagFilter = { BUBBLE: null, NIN: null, NEG: null };
 
-    function toggleImgFilter(type) {
+    async function toggleImgFilter(type) {
         window.imgFilter[type] = !window.imgFilter[type];
         document.getElementById(type.toLowerCase() + '-img-filter').classList.toggle('active', window.imgFilter[type]);
 
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
-        if (pg) pg.style.display = (window.imgFilter[type] || window.searchQuery) ? 'none' : 'flex';
+
+        if (window.imgFilter[type]) {
+            if (pg) pg.style.display = 'none';
+            await window.ensureFullCache(type);
+        } else if (!window.searchQuery && !window.hashtagFilter[type]) {
+            // back to normal browsing — cheap paginated reload
+            window.loadPosts(type, window.currentPage[type] || 1);
+            return;
+        }
 
         renderBoard(type);
     }
 
-    function onSearch() {
+    async function onSearch() {
         window.searchQuery = document.getElementById('global-search').value.trim();
         document.getElementById('search-clear-btn').classList.toggle('visible', window.searchQuery.length > 0);
 
-        ['bubble', 'nin', 'neg'].forEach(t => {
-            const pg = document.getElementById(t + '-pagination');
-            if (pg) pg.style.display = (window.searchQuery || window.imgFilter[t.toUpperCase()]) ? 'none' : 'flex';
-        });
-
-        renderBoard('BUBBLE');
-        renderBoard('NIN');
-        renderBoard('NEG');
-        renderBoard('DIARY');
+        if (window.searchQuery) {
+            ['bubble', 'nin', 'neg'].forEach(t => {
+                const pg = document.getElementById(t + '-pagination');
+                if (pg) pg.style.display = 'none';
+            });
+            await Promise.all([
+                window.ensureFullCache('BUBBLE'),
+                window.ensureFullCache('NIN'),
+                window.ensureFullCache('NEG')
+            ]);
+            renderBoard('BUBBLE');
+            renderBoard('NIN');
+            renderBoard('NEG');
+            renderBoard('DIARY');
+        } else {
+            clearSearch();
+        }
     }
 
     function clearSearch() {
@@ -1302,10 +1387,12 @@
         const dc = document.getElementById('diary-search-count');
         if (dc) dc.innerText = '';
 
-        // if img filter is active for a board, just re-render (no need to reload from server)
+        // if img-filter or hashtag-filter is still active for a board, just
+        // re-render from the already-loaded full cache; otherwise go back
+        // to cheap normal pagination
         ['BUBBLE', 'NIN', 'NEG'].forEach(t => {
-            if (window.imgFilter[t]) renderBoard(t);
-            else window.loadPosts(t, 1);
+            if (window.imgFilter[t] || window.hashtagFilter[t]) renderBoard(t);
+            else window.loadPosts(t, window.currentPage[t] || 1);
         });
         renderBoard('DIARY');
     }
@@ -1420,10 +1507,20 @@ function insertHashtag(type, tag) {
 function renderTagCloud(type) {
     const el = document.getElementById(type.toLowerCase() + '-tag-cloud');
     const insertEl = document.getElementById(type.toLowerCase() + '-insert-tags');
-    
+
     if (!el && !insertEl) return;
 
-    const posts = (window.fbAllPosts && window.fbAllPosts[type]) || [];
+    // Tag cloud needs full board history. Don't force it to load on every
+    // normal page view — if it's not cached yet, kick off a background
+    // fetch (silent, no failure banner) and re-render once it's ready.
+    if (!window.fbAllPosts || !window.fbAllPosts[type]) {
+        window.ensureFullCache(type).then(data => {
+            if (data) renderTagCloud(type);
+        });
+        return;
+    }
+
+    const posts = window.fbAllPosts[type] || [];
     const counts = {};
     posts.forEach(p => {
         extractHashtags(p.content).forEach(tag => {
@@ -1460,17 +1557,20 @@ function renderTagCloud(type) {
     }
 }
 
-    function filterByHashtag(type, tag) {
+    async function filterByHashtag(type, tag) {
         window.hashtagFilter[type] = tag;
         const pg = document.getElementById(type.toLowerCase() + '-pagination');
         if (pg) pg.style.display = 'none';
+        await window.ensureFullCache(type);
         renderBoard(type);
     }
 
     function clearHashtagFilter(type) {
         window.hashtagFilter[type] = null;
-        const pg = document.getElementById(type.toLowerCase() + '-pagination');
-        if (pg && !window.searchQuery && !window.imgFilter[type]) pg.style.display = 'flex';
+        if (!window.searchQuery && !window.imgFilter[type]) {
+            window.loadPosts(type, window.currentPage[type] || 1);
+            return;
+        }
         renderBoard(type);
     }
 
@@ -1673,6 +1773,7 @@ function renderTagCloud(type) {
                 } else {
                     window.clearLocalCache(type);
                     if (window.fbAllPosts) delete window.fbAllPosts[type];
+                    window.currentPage[type] = 1;
                     window.loadPosts(type, 1, { force: true });
                 }
             } else {
