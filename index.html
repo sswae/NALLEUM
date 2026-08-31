@@ -1142,10 +1142,22 @@
         return 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     }
 
+    // Boards are kept sorted newest-first by createdAt at all times (that's
+    // how they arrive from Firestore). Inserts a record at the position its
+    // createdAt belongs at, instead of always shoving it to the top — a
+    // freshly-written post (createdAt = now) still lands at the top, but a
+    // moved post keeps its original date and lands where that date sorts.
+    function insertSorted(arr, record) {
+        const ts = record.createdAt || 0;
+        let i = 0;
+        while (i < arr.length && (arr[i].createdAt || 0) > ts) i++;
+        arr.splice(i, 0, record);
+    }
+
     // Adds a brand-new post locally; queued as a Firestore create for the next flush.
     function queueCreate(type, data) {
         const record = { id: genLocalId(), ...data };
-        window.boardData[type].unshift(record);
+        insertSorted(window.boardData[type], record);
         window.pendingOps[type][record.id] = { op: 'create', data };
         persistPendingOps();
         persistBoardData(type);
