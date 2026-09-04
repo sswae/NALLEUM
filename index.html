@@ -8,14 +8,13 @@
     <link rel="icon" href="favicon.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
         /* ── Move Popup ── */
         .move-popup {
             position: absolute;
             z-index: 2000;
-            background: #f3e8c8;
-            border: 1px solid #3d2b1f;
+            background: #9bbc0f;
+            border: 1px solid #0f380f;
             border-bottom-width: 3px;
             display: flex;
             flex-direction: column;
@@ -25,17 +24,17 @@
             padding: 6px 10px;
             font-family: 'Press Start 2P', cursive;
             font-size: 8px;
-            color: #3d2b1f;
+            color: #0f380f;
             cursor: pointer;
         }
-        .move-popup-option:hover { background: #e8c568; }
+        .move-popup-option:hover { background: #8bac0f; }
         .move-popup-option + .move-popup-option { border-top: 1px solid rgba(0,0,0,0.15); }
 
         /* ── Reset & Base ── */
         * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
 
         body {
-            background-color: #cdb789;
+            background-color: #8bac0f;
             font-family: 'Press Start 2P', cursive;
             margin: 0;
             display: flex;
@@ -60,9 +59,9 @@
             height: 26px;
             padding: 0 8px;
             border-radius: 0;
-            background-color: #8a4a4a;
-            color: #f3e8c8;
-            border: 2px solid #000;
+            background-color: #306230;
+            color: #9bbc0f;
+            border: 2px solid #0f380f;
             border-bottom-width: 4px;
             font-family: 'Press Start 2P', cursive;
             font-size: 8px;
@@ -80,7 +79,7 @@
         #loading-screen {
             position: fixed;
             inset: 0;
-            background-color: #4c6b4f;
+            background-color: #306230;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -101,7 +100,7 @@
 
         h1 {
             font-size: 28px;
-            color: #3d2b1f;
+            color: #0f380f;
             letter-spacing: 2px;
             margin-top: 50px;
             margin-bottom: 60px;
@@ -118,29 +117,29 @@
 
         .tab-btn {
             background: none;
-            border: 2px solid #3d2b1f;
-            border-radius: 20px;
+            border: 2px solid #0f380f;
+            border-radius: 0;
             padding: 8px 15px;
             font-family: inherit;
             font-size: 11px;
             cursor: pointer;
-            color: #3d2b1f;
+            color: #0f380f;
             transition: transform 0.08s ease, background-color 0.1s;
         }
 
         .tab-btn.active {
-            background-color: #8a4a4a;
-            color: #f3e8c8;
+            background-color: #306230;
+            color: #9bbc0f;
         }
 
         /* ── Pixel Buttons (shared press effect) ── */
         .btn-pixel {
-            background-color: #4c6b4f;
-            color: #f3e8c8;
-            border: 2px solid #000;
+            background-color: #306230;
+            color: #9bbc0f;
+            border: 2px solid #0f380f;
             border-bottom-width: 4px;
             padding: 8px 15px;
-            border-radius: 20px;
+            border-radius: 0;
             font-size: 10px;
             cursor: pointer;
             font-family: 'Press Start 2P';
@@ -159,15 +158,15 @@
 
         /* ── Editor Box ── */
         .editor-box {
-            background-color: #f3e8c8;
-            border: 1px solid #3d2b1f;
+            background-color: #9bbc0f;
+            border: 1px solid #0f380f;
             padding: 15px;
             margin-bottom: 20px;
             transition: border-color 0.15s, background-color 0.15s;
         }
 
         .editor-box.drag-over {
-            background-color: #f0dfa8;
+            background-color: #8bac0f;
         }
 
         .post-input {
@@ -179,7 +178,7 @@
             font-size: 14px;
             outline: none;
             min-height: 100px;
-            color: #3d2b1f;
+            color: #0f380f;
         }
 
         .editor-controls {
@@ -201,18 +200,23 @@
             position: relative;
             width: 50px;
             height: 50px;
-            border: 1px solid #3d2b1f;
+            border: 1px solid #0f380f;
         }
 
-        .preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
+        }
 
         .preview-remove {
             position: absolute;
             top: -5px;
             right: -5px;
-            background: #c9a548;
-            color: white;
-            border-radius: 20%;
+            background: #8bac0f;
+            color: #0f380f;
+            border-radius: 0;
             width: 18px;
             height: 18px;
             font-size: 12px;
@@ -226,9 +230,9 @@
 
         /* ── Post List ── */
         .post-item {
-            border-bottom: 1px solid #3d2b1f;
+            border-bottom: 1px solid #0f380f;
             padding: 15px 0;
-            color: #3d2b1f;
+            color: #0f380f;
             display: flex;
             flex-direction: column;
         }
@@ -240,15 +244,15 @@
             display: flex;
             gap: 8px;
             font-size: 7px;
-            color: #f3e8c8;
+            color: #0f380f;
             cursor: pointer;
             margin-bottom: 5px;
         }
 
         /* ── Diary Cards ── */
         .diary-card {
-            background-color: #4c6b4f;
-            border: 2px solid #3d2b1f;
+            background-color: #306230;
+            border: 2px solid #0f380f;
             margin-bottom: 25px;
             padding: 15px;
             cursor: pointer;
@@ -267,14 +271,15 @@
             width: 100%;
             aspect-ratio: 16/9;
             object-fit: cover;
-            border: 1px solid #3d2b1f;
-            background-color: #4c6b4f;
+            border: 1px solid #0f380f;
+            background-color: #306230;
             margin-bottom: 12px;
             display: block;
+            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
         }
 
         .diary-card-title {
-            color: #f3e8c8;
+            color: #9bbc0f;
             font-family: sans-serif;
             font-weight: bold;
             font-size: 15px;
@@ -282,7 +287,7 @@
         }
 
         .diary-card-date {
-            color: #f3e8c8;
+            color: #9bbc0f;
             font-size: 8px;
             font-family: 'Press Start 2P';
             opacity: 0.8;
@@ -301,20 +306,20 @@
         .gb-btn {
             width: 22px;
             height: 22px;
-            background-color: #3d2b1f;
+            background-color: #0f380f;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             font-family: 'Press Start 2P';
             font-size: 10px;
-            color: #4c6b4f;
+            color: #8bac0f;
         }
 
         /* ── Diary Detail View ── */
         #diary-detail-view {
             display: none;
-            color: #3d2b1f;
+            color: #0f380f;
             min-height: 500px;
             padding-bottom: 50px;
         }
@@ -323,7 +328,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid #3d2b1f;
+            border-bottom: 2px solid #0f380f;
             padding-bottom: 10px;
             margin-bottom: 25px;
         }
@@ -333,13 +338,13 @@
             font-family: sans-serif;
             font-weight: bold;
             margin-bottom: 5px;
-            color: #3d2b1f;
+            color: #0f380f;
         }
 
         .detail-date {
             font-family: 'Press Start 2P';
             font-size: 10px;
-            color: #f3e8c8;
+            color: #306230;
         }
 
         .detail-actions {
@@ -347,30 +352,31 @@
             gap: 10px;
             font-size: 8px;
             font-family: 'Press Start 2P';
-            color: #f3e8c8;
+            color: #0f380f;
             cursor: pointer;
         }
 
         .detail-images img {
             width: 100%;
             margin-bottom: 15px;
-            border: 1px solid #3d2b1f;
+            border: 1px solid #0f380f;
             cursor: zoom-in;
+            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
         }
 
         .detail-content {
             font-family: sans-serif;
             font-size: 15px;
             line-height: 1.7;
-            color: #3d2b1f;
+            color: #0f380f;
             margin-bottom: 30px;
         }
 
         /* ── Diary Full Editor ── */
         #diary-full-editor {
             display: none;
-            background-color: #f3e8c8;
-            border: 1px solid #3d2b1f;
+            background-color: #9bbc0f;
+            border: 1px solid #0f380f;
             padding: 20px;
         }
 
@@ -378,7 +384,7 @@
             width: 100%;
             background: transparent;
             border: none;
-            border-bottom: 2px solid #3d2b1f;
+            border-bottom: 2px solid #0f380f;
             font-family: sans-serif;
             font-size: 18px;
             font-weight: bold;
@@ -505,7 +511,7 @@
 
         .backup-text {
             font-size: 10px;
-            color: #3d2b1f;
+            color: #0f380f;
             cursor: pointer;
             transition: color 0.3s;
         }
@@ -525,7 +531,7 @@
 
         .page-btn {
             cursor: pointer;
-            color: #f3e8c8;
+            color: #0f380f;
             font-family: 'Press Start 2P';
             font-size: 10px;
             transition: transform 0.08s ease;
@@ -533,10 +539,10 @@
         }
 
         .page-btn:active { transform: scale(0.9); }
-        .page-btn.active { color: #8a4a4a; text-decoration: underline; }
+        .page-btn.active { color: #306230; text-decoration: underline; }
 
         .page-ellipsis {
-            color: #f3e8c8;
+            color: #306230;
             opacity: 0.5;
             font-family: 'Press Start 2P';
             font-size: 10px;
@@ -544,7 +550,7 @@
 
         .page-nav {
             cursor: pointer;
-            color: #f3e8c8;
+            color: #0f380f;
             font-family: 'Press Start 2P';
             font-size: 9px;
             opacity: 0.75;
@@ -564,7 +570,7 @@
             margin-bottom: 14px;
         }
 
-        .search-icon { font-size: 11px; opacity: 0.4; color: #3d2b1f; flex-shrink: 0; }
+        .search-icon { font-size: 11px; opacity: 0.4; color: #0f380f; flex-shrink: 0; }
 
         .search-input {
             flex: 1;
@@ -574,17 +580,17 @@
             padding: 4px 2px;
             font-family: 'Press Start 2P';
             font-size: 8px;
-            color: #3d2b1f;
+            color: #0f380f;
             outline: none;
             transition: border-color 0.2s;
         }
 
         .search-input:focus { border-bottom-color: rgba(61, 43, 31, 0.65); }
-        .search-input::placeholder { color: #3d2b1f; opacity: 0.3; }
+        .search-input::placeholder { color: #0f380f; opacity: 0.3; }
 
         .search-clear {
             font-size: 10px;
-            color: #3d2b1f;
+            color: #0f380f;
             opacity: 0;
             cursor: pointer;
             transition: opacity 0.15s;
@@ -597,16 +603,16 @@
         .search-count {
             font-family: 'Press Start 2P';
             font-size: 8px;
-            color: #8a4a4a;
+            color: #306230;
             text-align: right;
             margin-bottom: 10px;
             min-height: 14px;
         }
 
         mark.hl {
-            background: #e8c568;
-            color: #3d2b1f;
-            border-radius: 2px;
+            background: #8bac0f;
+            color: #0f380f;
+            border-radius: 0;
             padding: 0 1px;
         }
 
@@ -621,12 +627,12 @@
 
         .img-filter-btn {
             background: none;
-            border: 1px solid #3d2b1f;
-            border-radius: 12px;
+            border: 1px solid #0f380f;
+            border-radius: 0;
             padding: 3px 8px;
             font-family: 'Press Start 2P';
             font-size: 7px;
-            color: #3d2b1f;
+            color: #0f380f;
             cursor: pointer;
             opacity: 0.6;
             transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
@@ -634,8 +640,8 @@
         .img-filter-btn:hover { opacity: 0.9; }
         .img-filter-btn:active { transform: scale(0.94); }
         .img-filter-btn.active {
-            background-color: #3d2b1f;
-            color: #f3e8c8;
+            background-color: #0f380f;
+            color: #9bbc0f;
             opacity: 1;
         }
 
@@ -644,7 +650,7 @@
             width: 14px;
             height: 14px;
             margin-right: 6px;
-            accent-color: #8a4a4a;
+            accent-color: #306230;
             cursor: pointer;
             flex-shrink: 0;
         }
@@ -661,11 +667,11 @@
             z-index: 950;
             width: calc(100% - 28px);
             max-width: 452px;
-            background-color: #3d2b1f;
-            color: #f3e8c8;
-            border: 2px solid #000;
+            background-color: #0f380f;
+            color: #9bbc0f;
+            border: 2px solid #0f380f;
             border-bottom-width: 4px;
-            border-radius: 8px;
+            border-radius: 0;
             padding: 10px 12px;
             align-items: center;
             justify-content: space-between;
@@ -688,7 +694,7 @@
 
         /* ── Hashtags ── */
         .hashtag {
-            color: #4c6b4f;
+            color: #306230;
             font-weight: bold;
             cursor: pointer;
         }
@@ -698,9 +704,9 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background-color: #c9a548;
-            color: #f3e8c8;
-            border-radius: 12px;
+            background-color: #8bac0f;
+            color: #0f380f;
+            border-radius: 0;
             padding: 3px 8px;
             font-family: 'Press Start 2P';
             font-size: 7px;
@@ -720,12 +726,12 @@
         .tag-cloud:empty { margin: 0; }
         .tag-cloud-item {
             background: none;
-            border: 1px solid #3d2b1f;
-            border-radius: 12px;
+            border: 1px solid #0f380f;
+            border-radius: 0;
             padding: 3px 9px;
             font-family: 'Press Start 2P';
             font-size: 8px;
-            color: #3d2b1f;
+            color: #0f380f;
             cursor: pointer;
             opacity: 0.75;
             transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
@@ -733,9 +739,9 @@
         .tag-cloud-item:hover { opacity: 1; }
         .tag-cloud-item:active { transform: scale(0.94); }
         .tag-cloud-item.active {
-            background-color: #c9a548;
-            border-color: #c9a548;
-            color: #f3e8c8;
+            background-color: #8bac0f;
+            border-color: #8bac0f;
+            color: #0f380f;
             opacity: 1;
         }
 
@@ -754,21 +760,21 @@
             animation: failFlicker 1s steps(2, start) infinite;
         }
         @keyframes failFlicker {
-            0%, 100% { opacity: 1; color: #f3e8c8; }
-            50%      { opacity: 0.35; color: #c9a548; }
+            0%, 100% { opacity: 1; color: #0f380f; }
+            50%      { opacity: 0.35; color: #306230; }
         }
 
         .retry-link {
             display: inline-block;
             text-decoration: underline;
             cursor: pointer;
-            color: #8a4a4a;
+            color: #306230;
         }
 
         /* ── Animations ── */
         @keyframes blink-color {
-            0%, 100% { color: #f3e8c8; }
-            50% { color: #e8c568; }
+            0%, 100% { color: #9bbc0f; }
+            50% { color: #8bac0f; }
         }
 
         .blinking-text {
@@ -791,7 +797,7 @@
 
 <!-- Loading Screen -->
 <div id="loading-screen" onclick="enterApp()">
-    <div class="blinking-text">🍥 PRESS START 🍥</div>
+    <div class="blinking-text">PRESS START</div>
 </div>
 
 <div id="app">
@@ -802,7 +808,7 @@
             <span class="search-clear" id="search-clear-btn" onclick="clearSearch()">✕</span>
         </div>
         <div class="header-row">
-            <span class="backup-text" onclick="backupToMarkdown()">🍡REPORT</span>
+            <span class="backup-text" onclick="backupToMarkdown()">🔄 REPORT</span>
         </div>
 
         <h1>NALLEUM</h1>
@@ -830,8 +836,8 @@
         </div>
         <div class="tag-cloud" id="bubble-tag-cloud"></div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">🥷 IMG ONLY</span>
-            <span class="img-filter-btn" id="bubble-select-toggle" onclick="toggleSelectMode('BUBBLE')">☑ SELECT</span>
+            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">💚 IMG ONLY</span>
+            <span class="img-filter-btn" id="bubble-select-toggle" onclick="toggleSelectMode('BUBBLE')">✅ SELECT</span>
             <span id="bubble-hashtag-badge"></span>
         </div>
         <div class="search-count" id="bubble-search-count"></div>
@@ -854,8 +860,8 @@
         </div>
         <div class="tag-cloud" id="nin-tag-cloud"></div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">🥷 IMG ONLY</span>
-            <span class="img-filter-btn" id="nin-select-toggle" onclick="toggleSelectMode('NIN')">☑ SELECT</span>
+            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">💚 IMG ONLY</span>
+            <span class="img-filter-btn" id="nin-select-toggle" onclick="toggleSelectMode('NIN')">✅ SELECT</span>
             <span id="nin-hashtag-badge"></span>
         </div>
         <div class="search-count" id="nin-search-count"></div>
@@ -878,8 +884,8 @@
         </div>
         <div class="tag-cloud" id="neg-tag-cloud"></div>
         <div class="filter-bar">
-            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">🥷 IMG ONLY</span>
-            <span class="img-filter-btn" id="neg-select-toggle" onclick="toggleSelectMode('NEG')">☑ SELECT</span>
+            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">💚 IMG ONLY</span>
+            <span class="img-filter-btn" id="neg-select-toggle" onclick="toggleSelectMode('NEG')">✅ SELECT</span>
             <span id="neg-hashtag-badge"></span>
         </div>
         <div class="search-count" id="neg-search-count"></div>
@@ -890,7 +896,7 @@
     <!-- DIARY Tab -->
     <div id="diary-container" style="display:none">
         <div style="text-align:right; margin-bottom:15px;">
-            <span style="font-size:10px; color:#f3e8c8; cursor:pointer; font-family:'Press Start 2P';"
+            <span style="font-size:10px; color:#0f380f; cursor:pointer; font-family:'Press Start 2P';"
                   onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
         </div>
         <div class="search-count" id="diary-search-count"></div>
@@ -912,13 +918,13 @@
         <div id="detailImages"  class="detail-images"></div>
         <div id="detailContent" class="detail-content"></div>
         <div class="editor-controls">
-            <button class="btn-pixel" style="background:#c9a548" onclick="closeDiaryDetail()">CLOSE</button>
+            <button class="btn-pixel" style="background:#8bac0f; color:#0f380f;" onclick="closeDiaryDetail()">CLOSE</button>
         </div>
     </div>
 
     <!-- Diary Editor -->
     <div id="diary-full-editor" style="display:none">
-        <div id="diary-editor-box" style="background:#f3e8c8; padding:15px; border:1px solid #3d2b1f; transition: border-color 0.15s, background-color 0.15s;">
+        <div id="diary-editor-box" style="background:#9bbc0f; padding:15px; border:1px solid #0f380f; transition: border-color 0.15s, background-color 0.15s;">
         <input type="text" id="diaryTitleInput" placeholder="제목">
         <textarea id="diaryContentInput" placeholder="내용"></textarea>
         <div id="diary-previews" class="preview-container"></div>
@@ -926,7 +932,7 @@
             <input type="file" id="diaryFile" multiple accept="image/*" onchange="handleImg(this, 'DIARY')" style="display:none">
             <button class="btn-pixel" onclick="document.getElementById('diaryFile').click()">IMG</button>
             <button class="btn-pixel" id="diarySendBtn" onclick="savePost('DIARY')">SEND</button>
-            <button class="btn-pixel" style="background:#c9a548" onclick="closeDiaryEditor()">BACK</button>
+            <button class="btn-pixel" style="background:#8bac0f; color:#0f380f;" onclick="closeDiaryEditor()">BACK</button>
         </div>
         </div>
     </div>
@@ -938,7 +944,7 @@
     <span id="bulkMoveCount">0개 선택됨</span>
     <div class="bulk-move-actions">
         <span class="btn-pixel bulk-move-btn" onclick="openBulkMovePopup(this)">MOVE</span>
-        <span class="btn-pixel bulk-move-btn" style="background:#8a4a4a" onclick="cancelSelectMode()">CANCEL</span>
+        <span class="btn-pixel bulk-move-btn" style="background:#306230" onclick="cancelSelectMode()">CANCEL</span>
     </div>
 </div>
 
@@ -1048,11 +1054,11 @@
     }
 
     function loadingHTML() {
-        return `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
+        return `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
     }
 
     function failHTML(retryOnclick) {
-        return `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">
+        return `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">
             <span class="fail-flicker">${bouncyText('LOAD FAILED.')}</span><br><br>
             <span class="retry-link" onclick="${retryOnclick}">💣 RETRY</span>
         </div>`;
@@ -1359,7 +1365,7 @@
         renderTagCloud(type);
 
         if (posts.length === 0 && filtered) {
-            container.innerHTML = `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">
+            container.innerHTML = `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">
                 ${activeTag ? 'NO POSTS WITH THIS TAG.' : (onlyImages && !kw ? 'NO IMAGE POSTS.' : 'NO RESULTS.')}
             </div>`;
             return;
@@ -1387,12 +1393,12 @@
                     <span onclick="movePostFromEl(this)">MOVE</span>
                     <span onclick="deletePostFromEl(this)">DEL</span>
                 </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content, type), kw)} <span style="color:#f3e8c8; font-size:9px;">${p.date}</span></div>
+                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content, type), kw)} <span style="color:#306230; font-size:9px;">${p.date}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"
                      data-images='${(p.images||[]).map(u=>u.replace(/'/g,"&#39;")).join(",")}'>
                     ${(p.images || []).map(img =>
                         `<img src="${img}" onclick="openModalFromThumb(this)"
-                              style="width:70px; height:70px; object-fit:cover; border:1px solid #3d2b1f; cursor:zoom-in;">`
+                              style="width:70px; height:70px; object-fit:cover; border:1px solid #0f380f; cursor:zoom-in; filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);">`
                     ).join('')}
                 </div>
             </div>
@@ -1490,7 +1496,7 @@ function renderTagCloud(type) {
         }
 
         if (posts.length === 0) {
-            container.innerHTML = `<div style="color:#f3e8c8; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
+            container.innerHTML = `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
             return;
         }
 
