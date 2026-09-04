@@ -8,6 +8,7 @@
     <link rel="icon" href="favicon.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
     <style>
         /* ── Move Popup ── */
         .move-popup {
@@ -132,24 +133,6 @@
             color: #f3e8c8;
         }
 
-        /* ── Music Button ── */
-        .music-btn {
-            background: none;
-            border: 2px solid #3d2b1f;
-            border-radius: 20px;
-            padding: 5px 10px;
-            font-family: inherit;
-            font-size: 9px;
-            cursor: pointer;
-            color: #3d2b1f;
-            transition: transform 0.08s ease, background-color 0.1s;
-        }
-
-        .music-btn.playing {
-            background-color: #8a4a4a;
-            color: #f3e8c8;
-        }
-
         /* ── Pixel Buttons (shared press effect) ── */
         .btn-pixel {
             background-color: #4c6b4f;
@@ -166,8 +149,7 @@
 
         /* ── Arcade Press Effect ── */
         .btn-pixel:active,
-        .tab-btn:active,
-        .music-btn:active {
+        .tab-btn:active {
             transform: translateY(2px);
         }
 
@@ -520,7 +502,6 @@
         }
 
         /* ── Misc ── */
-        #audio-player { display: none; }
 
         .backup-text {
             font-size: 10px;
@@ -785,13 +766,6 @@
         }
 
         /* ── Animations ── */
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .spinning { animation: spin 3s linear infinite; }
-
         @keyframes blink-color {
             0%, 100% { color: #f3e8c8; }
             50% { color: #e8c568; }
@@ -829,11 +803,6 @@
         </div>
         <div class="header-row">
             <span class="backup-text" onclick="backupToMarkdown()">🍡REPORT</span>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <div id="star" style="font-size:20px;">🍥</div>
-                <button id="playBtn" class="music-btn" onclick="toggleMusic()">PLAY</button>
-                <button id="saveBtn" class="music-btn" onclick="window.flushPendingOps()" title="지금 저장">SAVED</button>
-            </div>
         </div>
 
         <h1>NALLEUM</h1>
@@ -845,8 +814,6 @@
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
         </div>
     </header>
-
-    <audio id="audio-player" src="naruto5.mp3" loop preload="auto"></audio>
 
     <!-- BUBBLE Tab -->
     <div id="bubble-container">
@@ -994,7 +961,8 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import {
-        getFirestore, collection, addDoc, getDocs, query, orderBy,
+        initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+        collection, addDoc, onSnapshot, query, orderBy,
         doc, deleteDoc, updateDoc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import {
@@ -1010,51 +978,67 @@
         appId: "1:889977175883:web:553b25bd73cb0d758332ce"
     };
 
-    const app     = initializeApp(firebaseConfig);
-    const db      = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+
+    // Multi-tab IndexedDB persistence: reads/writes are served from a local
+    // cache first (works offline, and a repeat visit never has to wait on
+    // the network before showing something), and several tabs/windows on
+    // the same device share one cache instead of fighting over it.
+    const db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    });
     const storage = getStorage(app);
 
     window.db      = db;
     window.storage = storage;
     window.fbActions = {
         ref, uploadBytes, getDownloadURL, deleteObject,
-        addDoc, collection, getDocs, query, orderBy,
+        addDoc, collection, onSnapshot, query, orderBy,
         doc, deleteDoc, updateDoc
     };
 
     // ═══════════════════════════════════════════════════════════════
-    // ── LOCAL-FIRST DATA LAYER ──
+    // ── DATA LAYER — onSnapshot + offline persistence ──
     //
-    // Old behavior: every page turn / search / filter re-read from
-    // Firestore, and every save/edit/delete/move hit Firestore right
-    // away. That's what drove usage and latency up.
+    // Previous approach: read the whole collection once per app entry,
+    // queue every write in localStorage, and flush the queue by hand on a
+    // timer. That fixed the "too many reads" problem, but it also meant
+    // only one device could safely hold the "current" copy of the data —
+    // and a first-ever load with no cache and no network just showed a
+    // blank/failed screen.
     //
-    // New behavior:
-    //   1) App entry  → read each board ONCE from Firestore (or serve
-    //      straight from the browser cache if we already have it) and
-    //      keep the whole thing in memory (window.boardData).
-    //   2) While using the app → every write/edit/delete/move only
-    //      touches window.boardData + localStorage. Nothing hits
-    //      Firestore yet, so the UI reacts instantly.
-    //   3) App exit (tab hidden/closed) → the accumulated local changes
-    //      are flushed to Firestore in one pass. A periodic safety-net
-    //      flush also runs every 30s in case the tab gets killed
-    //      before an exit event fires (exit events aren't 100%
-    //      guaranteed by browsers, especially on mobile).
-    //
-    // Since this app has exactly one writer (you), a session-long local
-    // cache is safe — nobody else changes the data underneath you.
+    // New approach: one onSnapshot listener per board, backed by
+    // persistentLocalCache (IndexedDB). This gives us, for free, exactly
+    // the properties we were hand-rolling before:
+    //   - Reads are billed once for the initial listen, then only for
+    //     documents that actually changed — paging/searching/filtering
+    //     still never touches the network, since that's all done locally
+    //     over window.boardData.
+    //   - Writes made offline are queued and retried by the SDK itself
+    //     (no more hand-rolled retry loop that could hammer Firestore).
+    //   - Local writes (even offline ones) are reflected back through the
+    //     same onSnapshot callback almost instantly, so the UI still feels
+    //     instant — we don't need a separate optimistic-update path.
+    //   - Changes made on another device show up here automatically
+    //     whenever this device is online, which is the multi-device
+    //     support we didn't have before.
+    //   - On a repeat visit, the listener serves the last-synced local
+    //     copy immediately (no blank screen), then quietly reconciles with
+    //     the server. Only a device's very first-ever load (empty cache +
+    //     no network) can still show nothing — that's the one case the
+    //     retry screen below is for.
     // ═══════════════════════════════════════════════════════════════
 
-    const BOARD_TYPES    = ['BUBBLE', 'NIN', 'NEG', 'DIARY'];
-    const DATA_PREFIX    = 'nalleum_data_';
-    const OPS_KEY         = 'nalleum_pending_ops';
-    const POSTS_PER_PAGE = 20;
+    const BOARD_TYPES         = ['BUBBLE', 'NIN', 'NEG', 'DIARY'];
+    const POSTS_PER_PAGE      = 20;
+    const FIRST_LOAD_TIMEOUT_MS = 8000; // only matters if this device has never synced before
 
-    window.boardData   = { BUBBLE: [], NIN: [], NEG: [], DIARY: [] }; // full board contents, in-memory source of truth
-    window.currentPage = { BUBBLE: 1, NIN: 1, NEG: 1 };
-    window.pendingOps  = { BUBBLE: {}, NIN: {}, NEG: {}, DIARY: {} }; // id -> { op: 'create'|'update'|'delete', data, images? }
-    window.POSTS_PER_PAGE = POSTS_PER_PAGE;
+    window.boardData           = { BUBBLE: [], NIN: [], NEG: [], DIARY: [] }; // in-memory source of truth, kept in sync by onSnapshot
+    window.currentPage         = { BUBBLE: 1, NIN: 1, NEG: 1 };
+    window.POSTS_PER_PAGE      = POSTS_PER_PAGE;
+
+    const listEls   = { BUBBLE: 'bubble-list', NIN: 'nin-list', NEG: 'neg-list', DIARY: 'diary-list' };
+    const everLoaded = { BUBBLE: false, NIN: false, NEG: false, DIARY: false }; // has this board received ANY snapshot yet (cache or server)?
 
     // ── Arcade text helpers ──
     function bouncyText(text) {
@@ -1074,200 +1058,111 @@
         </div>`;
     }
 
-    // ── Browser-cache persistence ──
-    function persistBoardData(type) {
-        try {
-            localStorage.setItem(DATA_PREFIX + type, JSON.stringify({ ts: Date.now(), docs: window.boardData[type] }));
-        } catch (e) {
-            console.warn(`[nalleum] could not cache ${type} locally (storage full?)`, e);
-        }
-    }
-
-    function readCachedBoardData(type) {
-        try {
-            const raw = localStorage.getItem(DATA_PREFIX + type);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (!parsed || !Array.isArray(parsed.docs)) return null;
-            return parsed.docs;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function persistPendingOps() {
-        try { localStorage.setItem(OPS_KEY, JSON.stringify(window.pendingOps)); }
-        catch (e) { console.warn('[nalleum] could not persist pending changes', e); }
-    }
-
-    function readPendingOps() {
-        try {
-            const raw = localStorage.getItem(OPS_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            BOARD_TYPES.forEach(t => { if (!parsed[t]) parsed[t] = {}; });
-            return parsed;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // One read per board, only at app entry (or on an explicit forced retry).
-    async function loadBoardFromSource(type, force = false) {
-        if (!force) {
-            const cached = readCachedBoardData(type);
-            if (cached) {
-                window.boardData[type] = cached;
-                console.log(`[nalleum] ${type}: served from browser cache (0 Firestore reads), ${cached.length} posts`);
-                return true;
-            }
-        }
-        console.log(`[nalleum] ${type}: reading from Firestore${force ? ' (forced refresh)' : ' (first load this session)'}...`);
-        try {
-            const q    = query(collection(window.db, type), orderBy("createdAt", "desc"));
-            const snap = await getDocs(q);
+    // ── Listener setup — one per board, kept alive for the whole session ──
+    function attachBoardListener(type) {
+        const q = query(collection(window.db, type), orderBy("createdAt", "desc"));
+        onSnapshot(q, { includeMetadataChanges: true }, snap => {
             window.boardData[type] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            persistBoardData(type);
-            console.log(`[nalleum] ${type}: read ${window.boardData[type].length} docs from Firestore, cached locally`);
-            return true;
+            everLoaded[type] = true;
+
+            console.log(`[nalleum] ${type}: ${window.boardData[type].length} posts (${snap.metadata.fromCache ? 'from cache' : 'from server'}${snap.metadata.hasPendingWrites ? ', pending writes' : ''})`);
+
+            if (window.renderBoard) window.renderBoard(type);
+        }, err => {
+            console.error(`[nalleum] ${type}: listener error`, err);
+            // Only show the failure screen if this device has never synced
+            // this board before — otherwise keep showing whatever we've
+            // already got, since that's still good data.
+            if (!everLoaded[type]) {
+                const el = document.getElementById(listEls[type]);
+                if (el) el.innerHTML = failHTML(`window.retryLoad('${type}')`);
+            }
+        });
+    }
+
+    // A first-ever load with no cache and no network can sit "connecting"
+    // forever (there's nothing wrong, it's just genuinely waiting) — so we
+    // give it a timeout and offer a retry, instead of a silent blank list.
+    function armFirstLoadTimeout(type) {
+        setTimeout(() => {
+            if (everLoaded[type]) return;
+            const el = document.getElementById(listEls[type]);
+            if (el) el.innerHTML = failHTML(`window.retryLoad('${type}')`);
+        }, FIRST_LOAD_TIMEOUT_MS);
+    }
+
+    // The listener itself never stopped trying in the background, so
+    // "retry" just means: show the loading state again and give it another
+    // window to connect.
+    function retryLoad(type) {
+        if (everLoaded[type]) { window.renderBoard(type); return; }
+        const el = document.getElementById(listEls[type]);
+        if (el) el.innerHTML = loadingHTML();
+        armFirstLoadTimeout(type);
+    }
+
+    async function waitForRenderBoard() {
+        return new Promise(resolve => {
+            if (window.renderBoard) return resolve();
+            const iv = setInterval(() => {
+                if (window.renderBoard) { clearInterval(iv); resolve(); }
+            }, 20);
+        });
+    }
+
+    async function init() {
+        await waitForRenderBoard();
+
+        BOARD_TYPES.forEach(t => {
+            const el = document.getElementById(listEls[t]);
+            if (el) el.innerHTML = loadingHTML();
+            attachBoardListener(t);
+            armFirstLoadTimeout(t);
+        });
+    }
+
+    init();
+
+    // ── Writes — straight to Firestore, no manual queue ──
+    // persistentLocalCache already queues these when offline and resends
+    // them itself once the connection returns; and because onSnapshot
+    // reflects local writes immediately (see attachBoardListener above),
+    // the UI updates just as fast as the old hand-rolled version did.
+    async function queueCreate(type, data) {
+        try {
+            await window.fbActions.addDoc(window.fbActions.collection(window.db, type), data);
         } catch (e) {
-            console.error(`[nalleum] ${type}: read failed`, e);
-            return false;
+            console.error(`[nalleum] create failed for ${type}`, e);
         }
     }
 
-    // ── Local mutation helpers (no network — instant UI, queued for later sync) ──
-    function genLocalId() {
-        return 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    }
-
-    // Boards are kept sorted newest-first by createdAt at all times (that's
-    // how they arrive from Firestore). Inserts a record at the position its
-    // createdAt belongs at, instead of always shoving it to the top — a
-    // freshly-written post (createdAt = now) still lands at the top, but a
-    // moved post keeps its original date and lands where that date sorts.
-    function insertSorted(arr, record) {
-        const ts = record.createdAt || 0;
-        let i = 0;
-        while (i < arr.length && (arr[i].createdAt || 0) > ts) i++;
-        arr.splice(i, 0, record);
-    }
-
-    // Adds a brand-new post locally; queued as a Firestore create for the next flush.
-    function queueCreate(type, data) {
-        const record = { id: genLocalId(), ...data };
-        insertSorted(window.boardData[type], record);
-        window.pendingOps[type][record.id] = { op: 'create', data };
-        persistPendingOps();
-        persistBoardData(type);
-        return record;
-    }
-
-    // Edits an existing post locally. If it was created this same session and
-    // never flushed yet, the pending op just gets the newer content — no
-    // create-then-update pair is ever sent to Firestore.
-    function queueUpdate(type, id, data) {
-        const idx = window.boardData[type].findIndex(p => p.id === id);
-        if (idx === -1) return;
-        window.boardData[type][idx] = { ...window.boardData[type][idx], ...data };
-
-        const existing = window.pendingOps[type][id];
-        if (existing && existing.op === 'create') {
-            existing.data = { ...existing.data, ...data };
-        } else {
-            window.pendingOps[type][id] = { op: 'update', data: { ...(existing && existing.data), ...data } };
+    async function queueUpdate(type, id, data) {
+        try {
+            await window.fbActions.updateDoc(window.fbActions.doc(window.db, type, id), data);
+        } catch (e) {
+            console.error(`[nalleum] update failed for ${type}/${id}`, e);
         }
-        persistPendingOps();
-        persistBoardData(type);
     }
 
-    // Removes a post locally. If it was created this session and never
-    // flushed, it's simply dropped — it never existed on the server, so
-    // there's nothing to delete remotely.
-    function queueDelete(type, id, images) {
-        window.boardData[type] = window.boardData[type].filter(p => p.id !== id);
-        const existing = window.pendingOps[type][id];
-        if (existing && existing.op === 'create') {
-            delete window.pendingOps[type][id];
-        } else {
-            window.pendingOps[type][id] = { op: 'delete', images: images || [] };
-        }
-        persistPendingOps();
-        persistBoardData(type);
-    }
-
-    // ── Flush: send the accumulated local changes to Firestore ──
-    let flushing = false;
-
-    function pendingCount() {
-        return BOARD_TYPES.reduce((n, t) => n + Object.keys(window.pendingOps[t]).length, 0);
-    }
-
-    function updateSyncIndicator() {
-        const btn = document.getElementById('saveBtn');
-        if (!btn) return;
-        if (flushing) {
-            btn.innerText = 'SAVING...';
-            btn.classList.add('playing');
-            btn.disabled = true;
+    async function queueDelete(type, id, images) {
+        try {
+            await window.fbActions.deleteDoc(window.fbActions.doc(window.db, type, id));
+        } catch (e) {
+            console.error(`[nalleum] delete failed for ${type}/${id}`, e);
             return;
         }
-        btn.disabled = false;
-        const n = pendingCount();
-        if (n > 0) {
-            btn.innerText = `SAVE (${n})`;
-            btn.classList.add('playing');
-        } else {
-            btn.innerText = 'SAVED';
-            btn.classList.remove('playing');
+        for (const url of (images || [])) {
+            try {
+                const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+                await window.fbActions.deleteObject(window.fbActions.ref(window.storage, imgPath));
+            } catch (e) {}
         }
     }
 
-    async function flushPendingOps() {
-        if (flushing) return;
-        if (pendingCount() === 0) { updateSyncIndicator(); return; }
-
-        flushing = true;
-        updateSyncIndicator();
-        const { addDoc, collection, doc, updateDoc, deleteDoc, ref, deleteObject } = window.fbActions;
-        let ok = 0, failed = 0;
-
-        for (const type of BOARD_TYPES) {
-            const ops = window.pendingOps[type];
-            for (const id of Object.keys(ops)) {
-                const entry = ops[id];
-                try {
-                    if (entry.op === 'create') {
-                        const docRef = await addDoc(collection(window.db, type), entry.data);
-                        const idx = window.boardData[type].findIndex(p => p.id === id);
-                        if (idx !== -1) window.boardData[type][idx].id = docRef.id;
-                    } else if (entry.op === 'update') {
-                        await updateDoc(doc(window.db, type, id), entry.data);
-                    } else if (entry.op === 'delete') {
-                        await deleteDoc(doc(window.db, type, id));
-                        for (const url of (entry.images || [])) {
-                            try {
-                                const imgPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
-                                await deleteObject(ref(window.storage, imgPath));
-                            } catch (e) {}
-                        }
-                    }
-                    delete ops[id];
-                    ok++;
-                } catch (e) {
-                    console.error(`[nalleum] sync failed for ${type}/${id} (${entry.op}) — kept in queue, will retry`, e);
-                    failed++;
-                }
-            }
-            persistBoardData(type);
-        }
-        persistPendingOps();
-        flushing = false;
-        console.log(`[nalleum] sync complete: ${ok} sent${failed ? `, ${failed} failed (will retry)` : ''}`);
-
-        BOARD_TYPES.forEach(t => { if (window.renderBoard) window.renderBoard(t); });
-        updateSyncIndicator();
-    }
+    window.retryLoad        = retryLoad;
+    window.queueCreate      = queueCreate;
+    window.queueUpdate      = queueUpdate;
+    window.queueDelete      = queueDelete;
 
     // ── Pagination — now pure client-side slicing, zero reads per page turn ──
     function renderPagination(type, current, total) {
@@ -1317,66 +1212,9 @@
         window.renderBoard('DIARY');
     }
 
-    function waitForRenderBoard() {
-        return new Promise(resolve => {
-            if (window.renderBoard) return resolve();
-            const iv = setInterval(() => {
-                if (window.renderBoard) { clearInterval(iv); resolve(); }
-            }, 20);
-        });
-    }
-
-    async function retryLoad(type) {
-        const ok = await loadBoardFromSource(type, true);
-        if (ok) {
-            window.currentPage[type] = 1;
-            window.renderBoard(type);
-        } else {
-            const listEl = document.getElementById(type.toLowerCase() + '-list');
-            if (listEl) listEl.innerHTML = failHTML(`window.retryLoad('${type}')`);
-        }
-    }
-
-    async function init() {
-        await waitForRenderBoard();
-
-        // Crash recovery: pick up any changes left over from a session
-        // that never got to flush (browser closed before syncing ran).
-        const leftover = readPendingOps();
-        if (leftover) window.pendingOps = leftover;
-
-        const listEls = { BUBBLE: 'bubble-list', NIN: 'nin-list', NEG: 'neg-list', DIARY: 'diary-list' };
-        BOARD_TYPES.forEach(t => {
-            const el = document.getElementById(listEls[t]);
-            if (el && !readCachedBoardData(t)) el.innerHTML = loadingHTML();
-        });
-
-        // Exactly one read per board — only here, once per app entry.
-        const results = await Promise.all(BOARD_TYPES.map(t => loadBoardFromSource(t)));
-
-        BOARD_TYPES.forEach((t, i) => {
-            if (!results[i]) {
-                const el = document.getElementById(listEls[t]);
-                if (el) el.innerHTML = failHTML(`window.retryLoad('${t}')`);
-            } else {
-                window.renderBoard(t);
-            }
-        });
-
-        if (pendingCount() > 0) flushPendingOps(); // resume whatever didn't get sent last time
-        updateSyncIndicator();
-    }
-
-    init();
-
     window.loadPosts        = loadPosts;
     window.loadDiary        = loadDiary;
     window.renderPagination = renderPagination;
-    window.retryLoad        = retryLoad;
-    window.queueCreate      = queueCreate;
-    window.queueUpdate      = queueUpdate;
-    window.queueDelete      = queueDelete;
-    window.flushPendingOps  = flushPendingOps;
 </script>
 
 <!-- App Logic -->
@@ -1386,7 +1224,6 @@
     let tempBlobs  = [];
     let editDiaryId = null;
     let editPostId  = null;
-    let player = null, isPlaying = false;
     const DEFAULT_IMAGES = ["default1.png", "default2.png"];
 
     // ── Scroll to Top ──
@@ -2166,45 +2003,6 @@ function renderTagCloud(type) {
         const dx = e.changedTouches[0].clientX - touchStartX;
         if (Math.abs(dx) > 50) modalNav(dx < 0 ? 1 : -1);
     });
-
-    // ── Music ──
-    const audioPlayer = document.getElementById('audio-player');
-
-    // Surface load errors (e.g. file missing/404) to the console for diagnosis
-    audioPlayer.addEventListener('error', () => {
-        console.error('audio-player failed to load:', audioPlayer.error, audioPlayer.currentSrc);
-    });
-
-    function toggleMusic() {
-        const btn  = document.getElementById('playBtn');
-        const star = document.getElementById('star');
-
-        if (!isPlaying) {
-            const playPromise = audioPlayer.play();
-            if (playPromise && playPromise.catch) {
-                playPromise.then(() => {
-                    btn.innerText = 'STOP';
-                    btn.classList.add('playing');
-                    star.classList.add('spinning');
-                    isPlaying = true;
-                }).catch(err => {
-                    console.error('음악 재생 실패:', err);
-                    alert('음악을 재생할 수 없어요. (파일을 찾을 수 없거나 재생이 차단됐어요)');
-                });
-            } else {
-                btn.innerText = 'STOP';
-                btn.classList.add('playing');
-                star.classList.add('spinning');
-                isPlaying = true;
-            }
-        } else {
-            audioPlayer.pause();
-            btn.innerText = 'PLAY';
-            btn.classList.remove('playing');
-            star.classList.remove('spinning');
-            isPlaying = false;
-        }
-    }
 
     // ── Backup ──
     async function backupToMarkdown() {
