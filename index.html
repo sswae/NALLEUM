@@ -2012,45 +2012,68 @@ function renderTagCloud(type) {
 
     // ── Backup ──
     async function backupToMarkdown() {
-        // Builds the backup entirely from the local in-memory data —
-        // no Firestore reads needed, since window.boardData already holds
-        // everything (including changes made this session, even before sync).
-        const zip       = new JSZip();
-        const imgFolder = zip.folder("images");
-        let md = "# NALLEUM BACKUP\n\n";
+        const btn = document.querySelector('.backup-text');
+        const originalLabel = btn ? btn.textContent : '';
+        if (btn) { btn.textContent = '⏳ EXPORTING...'; btn.style.pointerEvents = 'none'; }
 
-        async function appendBoard(type, title) {
-            const posts = window.boardData[type] || [];
+        try {
+            // Builds the backup entirely from the local in-memory data —
+            // no Firestore reads needed, since window.boardData already holds
+            // everything (including changes made this session, even before sync).
+            const zip       = new JSZip();
+            const imgFolder = zip.folder("images");
+            let md = "# NALLEUM BACKUP\n\n";
 
-            md += `## ${title}\n\n`;
+            async function appendBoard(type, title) {
+                const posts = window.boardData[type] || [];
 
-            for (const data of posts) {
-                md += `### ${data.date}\n<!-- nalleum:${type}:${data.id} -->\n${data.content}\n`;
+                md += `## ${title}\n\n`;
 
-                if (data.images) {
-                    for (let i = 0; i < data.images.length; i++) {
-                        const fileName = `img_${type.toLowerCase()}_${data.id}_${i}.png`;
-                        const blob     = await (await fetch(data.images[i])).blob();
-                        imgFolder.file(fileName, blob);
-                        md += `![img](images/${fileName})\n`;
+                for (const data of posts) {
+                    md += `### ${data.date}\n<!-- nalleum:${type}:${data.id} -->\n${data.content}\n`;
+
+                    if (data.images) {
+                        for (let i = 0; i < data.images.length; i++) {
+                            const fileName = `img_${type.toLowerCase()}_${data.id}_${i}.png`;
+                            try {
+                                const res = await fetch(data.images[i]);
+                                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                const blob = await res.blob();
+                                imgFolder.file(fileName, blob);
+                                md += `![img](images/${fileName})\n`;
+                            } catch (imgErr) {
+                                // 이미지 하나가 실패해도(CORS, 네트워크 등) 전체 내보내기는 계속 진행
+                                console.error(`[nalleum] 이미지 다운로드 실패: ${data.images[i]}`, imgErr);
+                                md += `![img](${data.images[i]}) <!-- 다운로드 실패: 원본 링크로 대체됨 -->\n`;
+                            }
+                        }
                     }
+
+                    md += "\n---\n\n";
                 }
-
-                md += "\n---\n\n";
             }
+
+            await appendBoard("BUBBLE", "BUBBLE");
+            await appendBoard("NIN", "NIN");
+            await appendBoard("NEG", "NEG");
+            await appendBoard("DIARY", "DIARY");
+
+            zip.file("backup.md", md);
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href     = url;
+            a.download = `nalleum_backup_${new Date().toISOString().split('T')[0]}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (err) {
+            console.error('[nalleum] 백업 내보내기 실패:', err);
+            alert('마크다운 내보내기에 실패했습니다.\n' + (err && err.message ? err.message : err));
+        } finally {
+            if (btn) { btn.textContent = originalLabel || '🔄 REPORT'; btn.style.pointerEvents = ''; }
         }
-
-        await appendBoard("BUBBLE", "BUBBLE");
-        await appendBoard("NIN", "NIN");
-        await appendBoard("NEG", "NEG");
-        await appendBoard("DIARY", "DIARY");
-
-        zip.file("backup.md", md);
-        const content = await zip.generateAsync({ type: "blob" });
-        const a = document.createElement('a');
-        a.href     = URL.createObjectURL(content);
-        a.download = `nalleum_backup_${new Date().toISOString().split('T')[0]}.zip`;
-        a.click();
     }
 
     // ── Ctrl+Enter to send ──
