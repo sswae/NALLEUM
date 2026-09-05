@@ -2025,7 +2025,7 @@ function renderTagCloud(type) {
             md += `## ${title}\n\n`;
 
             for (const data of posts) {
-                md += `### ${data.date}\n${data.content}\n`;
+                md += `### ${data.date}\n<!-- nalleum:${type}:${data.id} -->\n${data.content}\n`;
 
                 if (data.images) {
                     for (let i = 0; i < data.images.length; i++) {
