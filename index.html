@@ -813,11 +813,12 @@
 
         <h1>NALLEUM</h1>
 
-        <div class="nav-tabs">
-            <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')">BUBBLE</button>
-            <button id="tabNin"    class="tab-btn"        onclick="switchTab('NIN')">NIN</button>
-            <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')">NEG</button>
+        <div class="nav-tabs" id="nav-tabs-row">
+            <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')" oncontextmenu="event.preventDefault(); deleteBoard('BUBBLE')">BUBBLE</button>
+            <button id="tabNin"    class="tab-btn"        onclick="switchTab('NIN')"    oncontextmenu="event.preventDefault(); deleteBoard('NIN')">NIN</button>
+            <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')"    oncontextmenu="event.preventDefault(); deleteBoard('NEG')">NEG</button>
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
+            <button id="tabAddBoard" class="tab-btn" onclick="createNewBoard()" title="새 게시판 만들기">+</button>
         </div>
     </header>
 
@@ -1045,6 +1046,14 @@
 
     const listEls   = { BUBBLE: 'bubble-list', NIN: 'nin-list', NEG: 'neg-list', DIARY: 'diary-list' };
     const everLoaded = { BUBBLE: false, NIN: false, NEG: false, DIARY: false }; // has this board received ANY snapshot yet (cache or server)?
+    const unsubscribers = {}; // type -> onSnapshot unsubscribe fn, so a deleted custom board's listener can be torn down cleanly
+
+    // These are plain objects, so exposing the reference lets the App Logic
+    // script add/remove entries for custom boards directly (e.g.
+    // listEls['ABC'] = 'abc-list') without needing extra plumbing.
+    window.listEls       = listEls;
+    window.everLoaded    = everLoaded;
+    window.unsubscribers = unsubscribers;
 
     // ── Arcade text helpers ──
     function bouncyText(text) {
@@ -1067,7 +1076,7 @@
     // ── Listener setup — one per board, kept alive for the whole session ──
     function attachBoardListener(type) {
         const q = query(collection(window.db, type), orderBy("createdAt", "desc"));
-        onSnapshot(q, { includeMetadataChanges: true }, snap => {
+        const unsub = onSnapshot(q, { includeMetadataChanges: true }, snap => {
             window.boardData[type] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             everLoaded[type] = true;
 
@@ -1084,6 +1093,8 @@
                 if (el) el.innerHTML = failHTML(`window.retryLoad('${type}')`);
             }
         });
+        unsubscribers[type] = unsub;
+        return unsub;
     }
 
     // A first-ever load with no cache and no network can sit "connecting"
@@ -1125,6 +1136,30 @@
             attachBoardListener(t);
             armFirstLoadTimeout(t);
         });
+
+        attachBoardsMetaListener();
+    }
+
+    // ── Custom boards — a small "_boards" collection is the source of truth
+    // for which extra boards (beyond BUBBLE/NIN/NEG/DIARY) exist. Listening
+    // to it means a board created on one device shows up on every other
+    // device automatically, same as posts do.
+    function attachBoardsMetaListener() {
+        const q = query(collection(window.db, '_boards'), orderBy('createdAt', 'asc'));
+        onSnapshot(q, snap => {
+            const names = [];
+            window.customBoardDocId = window.customBoardDocId || {};
+            snap.docs.forEach(d => {
+                const data = d.data();
+                if (data && data.name) {
+                    names.push(data.name);
+                    window.customBoardDocId[data.name] = d.id;
+                }
+            });
+            if (window.reconcileCustomBoards) window.reconcileCustomBoards(names);
+        }, err => {
+            console.error('[nalleum] _boards listener error', err);
+        });
     }
 
     init();
@@ -1165,10 +1200,13 @@
         }
     }
 
-    window.retryLoad        = retryLoad;
-    window.queueCreate      = queueCreate;
-    window.queueUpdate      = queueUpdate;
-    window.queueDelete      = queueDelete;
+    window.retryLoad          = retryLoad;
+    window.queueCreate        = queueCreate;
+    window.queueUpdate        = queueUpdate;
+    window.queueDelete        = queueDelete;
+    window.attachBoardListener  = attachBoardListener;
+    window.armFirstLoadTimeout  = armFirstLoadTimeout;
+    window.loadingHTML          = loadingHTML;
 
     // ── Pagination — now pure client-side slicing, zero reads per page turn ──
     function renderPagination(type, current, total) {
@@ -1254,12 +1292,30 @@
 
     window.addEventListener('load', enterApp);
 
+    // ── Board type registry — BUBBLE/NIN/NEG/DIARY are always there; custom
+    // boards (created via createNewBoard) get added/removed here as the
+    // "_boards" Firestore collection changes. Every place that used to loop
+    // over a hardcoded board list now goes through getBoardTypes() instead,
+    // so a new board just works everywhere without extra wiring.
+    window.customBoards     = {};   // { TYPE: true }
+    window.customBoardDocId = {};   // { TYPE: '_boards' doc id }  — filled in by the meta listener
+
+    function getBoardTypes() {
+        return ['BUBBLE', 'NIN', 'NEG', 'DIARY', ...Object.keys(window.customBoards)];
+    }
+
+    function tabIdFor(type) {
+        return 'tab' + type.charAt(0) + type.slice(1).toLowerCase();
+    }
+
     // ── Tab switching ──
     function switchTab(tab) {
         if (window.currentSelectType && window.currentSelectType !== tab) cancelSelectMode();
-        ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => {
-            document.getElementById('tab' + t.charAt(0) + t.slice(1).toLowerCase()).classList.toggle('active', t === tab);
-            document.getElementById(t.toLowerCase() + '-container').style.display = (t === tab) ? 'block' : 'none';
+        getBoardTypes().forEach(t => {
+            const tabEl = document.getElementById(tabIdFor(t));
+            if (tabEl) tabEl.classList.toggle('active', t === tab);
+            const contEl = document.getElementById(t.toLowerCase() + '-container');
+            if (contEl) contEl.style.display = (t === tab) ? 'block' : 'none';
         });
         document.getElementById('diary-full-editor').style.display  = 'none';
         document.getElementById('diary-detail-view').style.display  = 'none';
@@ -1282,22 +1338,182 @@
     function onSearch() {
         window.searchQuery = document.getElementById('global-search').value.trim();
         document.getElementById('search-clear-btn').classList.toggle('visible', window.searchQuery.length > 0);
-        ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => renderBoard(t));
+        getBoardTypes().forEach(t => renderBoard(t));
     }
 
     function clearSearch() {
         window.searchQuery = '';
         document.getElementById('global-search').value = '';
         document.getElementById('search-clear-btn').classList.remove('visible');
-        ['bubble', 'nin', 'neg'].forEach(t => {
-            const countEl = document.getElementById(t + '-search-count');
+        getBoardTypes().filter(t => t !== 'DIARY').forEach(t => {
+            const countEl = document.getElementById(t.toLowerCase() + '-search-count');
             if (countEl) countEl.innerText = '';
         });
         const dc = document.getElementById('diary-search-count');
         if (dc) dc.innerText = '';
 
-        ['BUBBLE', 'NIN', 'NEG', 'DIARY'].forEach(t => renderBoard(t));
+        getBoardTypes().forEach(t => renderBoard(t));
     }
+
+    // ── Custom board lifecycle ──
+    function addCustomBoardUI(type) {
+        if (window.customBoards[type]) return; // already added
+        window.customBoards[type] = true;
+
+        window.boardData[type]     = [];
+        window.currentPage[type]   = 1;
+        window.imgFilter[type]     = false;
+        window.hashtagFilter[type] = null;
+        window.selectMode[type]    = false;
+        window.selectedPosts[type] = new Set();
+        if (window.listEls)    window.listEls[type]    = type.toLowerCase() + '-list';
+        if (window.everLoaded) window.everLoaded[type] = false;
+
+        const lower = type.toLowerCase();
+
+        const tabBtn = document.createElement('button');
+        tabBtn.id = tabIdFor(type);
+        tabBtn.className = 'tab-btn';
+        tabBtn.textContent = type;
+        tabBtn.onclick = () => switchTab(type);
+        tabBtn.oncontextmenu = (e) => { e.preventDefault(); deleteBoard(type); };
+        const addBtn = document.getElementById('tabAddBoard');
+        if (addBtn && addBtn.parentNode) addBtn.parentNode.insertBefore(tabBtn, addBtn);
+
+        const container = document.createElement('div');
+        container.id = lower + '-container';
+        container.style.display = 'none';
+        container.innerHTML = `
+            <div class="editor-box" id="${lower}-editor-box">
+                <textarea id="${lower}-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
+                <div id="${lower}-insert-tags" class="tag-cloud" style="margin-top: 10px; padding-top: 10px;"></div>
+                <div id="${lower}-previews" class="preview-container"></div>
+                <div class="editor-controls">
+                    <input type="file" id="${lower}File" multiple accept="image/*" onchange="handleImg(this, '${type}')" style="display:none">
+                    <button class="btn-pixel" onclick="document.getElementById('${lower}File').click()">IMG</button>
+                    <button id="${lower}SendBtn" class="btn-pixel" onclick="savePost('${type}')">SEND</button>
+                </div>
+            </div>
+            <div class="tag-cloud" id="${lower}-tag-cloud"></div>
+            <div class="filter-bar">
+                <span class="img-filter-btn" id="${lower}-img-filter" onclick="toggleImgFilter('${type}')">💚 IMG ONLY</span>
+                <span class="img-filter-btn" id="${lower}-select-toggle" onclick="toggleSelectMode('${type}')">✅ SELECT</span>
+                <span id="${lower}-hashtag-badge"></span>
+            </div>
+            <div class="search-count" id="${lower}-search-count"></div>
+            <div id="${lower}-list"></div>
+            <div id="${lower}-pagination" class="pagination"></div>
+        `;
+        document.getElementById('app').appendChild(container);
+
+        setupDragDrop(`${lower}-editor-box`, `${lower}-previews`);
+
+        const listEl = document.getElementById(lower + '-list');
+        if (listEl && window.loadingHTML) listEl.innerHTML = window.loadingHTML();
+
+        if (window.attachBoardListener)   window.attachBoardListener(type);
+        if (window.armFirstLoadTimeout)   window.armFirstLoadTimeout(type);
+    }
+
+    function removeCustomBoardUI(type) {
+        if (!window.customBoards[type]) return;
+
+        const tabEl = document.getElementById(tabIdFor(type));
+        const wasActive = !!(tabEl && tabEl.classList.contains('active'));
+
+        if (window.unsubscribers && window.unsubscribers[type]) {
+            window.unsubscribers[type]();
+            delete window.unsubscribers[type];
+        }
+
+        delete window.customBoards[type];
+        delete window.boardData[type];
+        delete window.currentPage[type];
+        delete window.imgFilter[type];
+        delete window.hashtagFilter[type];
+        delete window.selectMode[type];
+        delete window.selectedPosts[type];
+        if (window.listEls)    delete window.listEls[type];
+        if (window.everLoaded) delete window.everLoaded[type];
+
+        if (window.currentSelectType === type) window.currentSelectType = null;
+
+        if (tabEl) tabEl.remove();
+        const containerEl = document.getElementById(type.toLowerCase() + '-container');
+        if (containerEl) containerEl.remove();
+
+        if (wasActive) switchTab('BUBBLE');
+    }
+
+    // Called from the Firebase module's "_boards" listener whenever the
+    // list of custom boards changes — reconciles the DOM to match exactly,
+    // whether the change came from this device or another one.
+    function reconcileCustomBoards(names) {
+        const current = Object.keys(window.customBoards);
+        names.forEach(name => { if (!window.customBoards[name]) addCustomBoardUI(name); });
+        current.forEach(name => { if (!names.includes(name)) removeCustomBoardUI(name); });
+    }
+    window.reconcileCustomBoards = reconcileCustomBoards;
+
+    function createNewBoard() {
+        const raw = prompt('새 게시판 이름을 입력해주세요 (영문/숫자, 예: ABC)');
+        if (raw === null) return;
+
+        const name = raw.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
+        if (!name) { alert('영문/숫자로 이름을 입력해주세요.'); return; }
+
+        const reserved = ['BUBBLE', 'NIN', 'NEG', 'DIARY', 'BOARDS'];
+        if (reserved.includes(name) || name.startsWith('_')) {
+            alert('이미 사용 중이거나 예약된 이름이에요. 다른 이름을 입력해주세요.');
+            return;
+        }
+        if (getBoardTypes().includes(name)) {
+            alert('이미 존재하는 게시판이에요.');
+            return;
+        }
+
+        window.fbActions.addDoc(window.fbActions.collection(window.db, '_boards'), { name, createdAt: Date.now() })
+            .catch(e => { console.error('[nalleum] 게시판 생성 실패', e); alert('게시판 생성에 실패했어요.'); });
+        // addCustomBoardUI() runs automatically once the _boards listener
+        // echoes this write back (same instant local-echo behavior as
+        // every other write in this app).
+    }
+    window.createNewBoard = createNewBoard;
+
+    // ── Delete board (right-click on a tab) ──
+    // DIARY is intentionally excluded everywhere (never has this handler
+    // attached) — it's the one board that's always meant to stick around.
+    async function deleteBoard(type) {
+        if (type === 'DIARY') return;
+
+        const isCustom = !!window.customBoards[type];
+        const postCount = (window.boardData[type] || []).length;
+        const msg = `정말로 "${type}" 게시판을 삭제할까요?\n`
+            + `이 안의 글 ${postCount}개와 첨부 이미지가 파이어베이스에서 영구히 삭제되고, 되돌릴 수 없어요.`;
+        if (!confirm(msg)) return;
+
+        const posts = [...(window.boardData[type] || [])];
+        for (const p of posts) {
+            window.queueDelete(type, p.id, p.images || []);
+        }
+
+        if (isCustom) {
+            const docId = window.customBoardDocId && window.customBoardDocId[type];
+            if (docId) {
+                window.fbActions.deleteDoc(window.fbActions.doc(window.db, '_boards', docId))
+                    .catch(e => console.error('[nalleum] 게시판 메타 삭제 실패', e));
+            }
+            // Don't wait for the _boards listener round trip — remove the
+            // UI immediately, it'll just no-op when the echo arrives.
+            removeCustomBoardUI(type);
+        } else {
+            window.imgFilter[type] = false;
+            window.hashtagFilter[type] = null;
+            if (window.selectMode[type]) cancelSelectMode();
+            window.renderBoard(type);
+        }
+    }
+    window.deleteBoard = deleteBoard;
 
     function highlight(text, kw) {
         if (!kw) return text;
@@ -1703,7 +1919,11 @@ function renderTagCloud(type) {
     }
 
     // ── Delete post ──
-    const ALL_BOARDS = ['BUBBLE', 'NIN', 'NEG'];
+    // 이동 대상 게시판: DIARY(구조가 달라 이동 불가)와 자기 자신을 제외한
+    // 전부 — 커스텀 게시판이 새로 생겨도 자동으로 목록에 포함된다.
+    function getMoveTargets(exclude) {
+        return getBoardTypes().filter(t => t !== 'DIARY' && t !== exclude);
+    }
 
     function movePostFromEl(el) {
         const item     = el.closest('.post-item');
@@ -1711,7 +1931,7 @@ function renderTagCloud(type) {
         const id       = item.dataset.id;
         const imgDiv   = item.querySelector('[data-images]');
         const images   = imgDiv && imgDiv.dataset.images ? imgDiv.dataset.images.split(',') : [];
-        const targets  = ALL_BOARDS.filter(t => t !== fromType);
+        const targets  = getMoveTargets(fromType);
 
         openMoveTargetPopup(el, targets, (toType) => {
             movePost(fromType, toType, id, images);
@@ -1814,7 +2034,7 @@ function renderTagCloud(type) {
         const ids = Array.from(window.selectedPosts[type]);
         if (ids.length === 0) { alert('이동할 글을 먼저 선택해주세요.'); return; }
 
-        const targets = ALL_BOARDS.filter(t => t !== type);
+        const targets = getMoveTargets(type);
         openMoveTargetPopup(el, targets, (toType) => {
             bulkMovePosts(type, toType, ids);
         });
