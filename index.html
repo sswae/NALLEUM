@@ -2014,7 +2014,9 @@ function renderTagCloud(type) {
     async function backupToMarkdown() {
         const btn = document.querySelector('.backup-text');
         const originalLabel = btn ? btn.textContent : '';
-        if (btn) { btn.textContent = '⏳ EXPORTING...'; btn.style.pointerEvents = 'none'; }
+        const setLabel = (text) => { if (btn) btn.textContent = text; };
+        if (btn) { btn.style.pointerEvents = 'none'; }
+        setLabel('⏳ EXPORTING...');
 
         try {
             // Builds the backup entirely from the local in-memory data —
@@ -2022,43 +2024,82 @@ function renderTagCloud(type) {
             // everything (including changes made this session, even before sync).
             const zip       = new JSZip();
             const imgFolder = zip.folder("images");
-            let md = "# NALLEUM BACKUP\n\n";
 
-            async function appendBoard(type, title) {
+            const BOARD_LIST = [
+                ['BUBBLE', 'BUBBLE'],
+                ['NIN',    'NIN'],
+                ['NEG',    'NEG'],
+                ['DIARY',  'DIARY']
+            ];
+
+            // 1) 이미지 다운로드 작업 목록만 먼저 모은다 (아직 fetch는 안 함)
+            const imageJobs = [];
+            for (const [type] of BOARD_LIST) {
                 const posts = window.boardData[type] || [];
+                for (const data of posts) {
+                    if (!data.images) continue;
+                    data.images.forEach((url, i) => {
+                        imageJobs.push({
+                            type, data, i, url,
+                            fileName: `img_${type.toLowerCase()}_${data.id}_${i}.png`
+                        });
+                    });
+                }
+            }
 
+            // 2) 동시에 여러 장씩(최대 8개) 병렬로 다운로드. 실패한 이미지는 건너뛰고 계속 진행.
+            const CONCURRENCY = 8;
+            const resultByUrl = new Map(); // url -> blob | null
+            let done = 0;
+            let cursor = 0;
+
+            async function worker() {
+                while (cursor < imageJobs.length) {
+                    const job = imageJobs[cursor++];
+                    try {
+                        const res = await fetch(job.url);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        resultByUrl.set(job.url, await res.blob());
+                    } catch (imgErr) {
+                        console.error(`[nalleum] 이미지 다운로드 실패: ${job.url}`, imgErr);
+                        resultByUrl.set(job.url, null);
+                    }
+                    done++;
+                    if (imageJobs.length) setLabel(`⏳ IMAGES ${done}/${imageJobs.length}`);
+                }
+            }
+            await Promise.all(Array.from({ length: Math.min(CONCURRENCY, imageJobs.length) }, worker));
+
+            for (const job of imageJobs) {
+                const blob = resultByUrl.get(job.url);
+                if (blob) imgFolder.file(job.fileName, blob);
+            }
+
+            // 3) 다운로드 결과를 이용해 마크다운 텍스트를 순서대로 조립
+            setLabel('⏳ BUILDING FILE...');
+            let md = "# NALLEUM BACKUP\n\n";
+            for (const [type, title] of BOARD_LIST) {
+                const posts = window.boardData[type] || [];
                 md += `## ${title}\n\n`;
 
                 for (const data of posts) {
                     md += `### ${data.date}\n<!-- nalleum:${type}:${data.id} -->\n${data.content}\n`;
 
                     if (data.images) {
-                        for (let i = 0; i < data.images.length; i++) {
+                        data.images.forEach((url, i) => {
                             const fileName = `img_${type.toLowerCase()}_${data.id}_${i}.png`;
-                            try {
-                                const res = await fetch(data.images[i]);
-                                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                                const blob = await res.blob();
-                                imgFolder.file(fileName, blob);
-                                md += `![img](images/${fileName})\n`;
-                            } catch (imgErr) {
-                                // 이미지 하나가 실패해도(CORS, 네트워크 등) 전체 내보내기는 계속 진행
-                                console.error(`[nalleum] 이미지 다운로드 실패: ${data.images[i]}`, imgErr);
-                                md += `![img](${data.images[i]}) <!-- 다운로드 실패: 원본 링크로 대체됨 -->\n`;
-                            }
-                        }
+                            md += resultByUrl.get(url)
+                                ? `![img](images/${fileName})\n`
+                                : `![img](${url}) <!-- 다운로드 실패: 원본 링크로 대체됨 -->\n`;
+                        });
                     }
 
                     md += "\n---\n\n";
                 }
             }
 
-            await appendBoard("BUBBLE", "BUBBLE");
-            await appendBoard("NIN", "NIN");
-            await appendBoard("NEG", "NEG");
-            await appendBoard("DIARY", "DIARY");
-
             zip.file("backup.md", md);
+            setLabel('⏳ ZIPPING...');
             const content = await zip.generateAsync({ type: "blob" });
             const url = URL.createObjectURL(content);
             const a = document.createElement('a');
@@ -2072,7 +2113,8 @@ function renderTagCloud(type) {
             console.error('[nalleum] 백업 내보내기 실패:', err);
             alert('마크다운 내보내기에 실패했습니다.\n' + (err && err.message ? err.message : err));
         } finally {
-            if (btn) { btn.textContent = originalLabel || '🔄 REPORT'; btn.style.pointerEvents = ''; }
+            setLabel(originalLabel || '🔄 REPORT');
+            if (btn) { btn.style.pointerEvents = ''; }
         }
     }
 
