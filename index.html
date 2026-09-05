@@ -2042,6 +2042,8 @@ function renderTagCloud(type) {
 
         await appendBoard("BUBBLE", "BUBBLE");
         await appendBoard("NIN", "NIN");
+        await appendBoard("NEG", "NEG");
+        await appendBoard("DIARY", "DIARY");
 
         zip.file("backup.md", md);
         const content = await zip.generateAsync({ type: "blob" });
