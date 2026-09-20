@@ -6,47 +6,60 @@
     <title>NALLEUM</title>
     <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
     <link rel="icon" href="favicon.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        /* ── Move Popup ── */
-        .move-popup {
-            position: absolute;
-            z-index: 2000;
-            background: #9bbc0f;
-            border: 1px solid #0f380f;
-            border-bottom-width: 3px;
-            display: flex;
-            flex-direction: column;
-            min-width: 70px;
+
+        /* ═══════════════════════════════════════════════════════════
+           OLD MAC OS — desktop / window chrome
+           ═══════════════════════════════════════════════════════════ */
+        :root {
+            --desktop-a:  #6f6f8c;
+            --desktop-b:  #83839f;
+            --win-bg:     #d6d6d6;
+            --win-bg-light:#e8e8e8;
+            --win-border: #2b2b2b;
+            --line-hi:    #f4f4f4;
+            --line-lo:    #a8a8a8;
+            --sunken:     #c4c4c4;
+            --text:       #2b2b2b;
+            --text-soft:  #5b5b5b;
+            --navy-a:     #26356e;
+            --navy-b:     #3a5aa8;
+            --btn-face:   #e2e2e2;
+            --mac-font:   'Geneva', 'Tahoma', 'Verdana', sans-serif;
+            --mac-title-font: Georgia, 'Times New Roman', serif;
         }
-        .move-popup-option {
-            padding: 6px 10px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 8px;
-            color: #0f380f;
-            cursor: pointer;
-        }
-        .move-popup-option:hover { background: #8bac0f; }
-        .move-popup-option + .move-popup-option { border-top: 1px solid rgba(0,0,0,0.15); }
 
         /* ── Reset & Base ── */
-        * { box-sizing: border-box; text-shadow: none !important; box-shadow: none !important; }
+        * { box-sizing: border-box; }
 
-        body {
-            background-color: #8bac0f;
-            font-family: 'Press Start 2P', cursive;
+        html, body {
+            background: radial-gradient(ellipse at 50% 20%, var(--desktop-b), var(--desktop-a));
+            font-family: var(--mac-font);
             margin: 0;
             display: flex;
             justify-content: center;
+            color: var(--text);
+        }
+
+        /* classic chunky scrollbar */
+        ::-webkit-scrollbar { width: 15px; height: 15px; }
+        ::-webkit-scrollbar-track { background: var(--sunken); border-left: 1px solid var(--line-lo); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
         }
 
         #app {
             width: 100%;
             max-width: 480px;
             min-height: 100vh;
-            padding: 20px;
+            padding: 0 0 20px;
             position: relative;
+            background: var(--win-bg);
+            border: 2px solid var(--win-border);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.35), inset 1px 1px 0 var(--line-hi);
         }
 
         /* ── Scroll to Top ── */
@@ -57,29 +70,29 @@
             z-index: 900;
             width: auto;
             height: 26px;
-            padding: 0 8px;
+            padding: 0 10px;
             border-radius: 0;
-            background-color: #306230;
-            color: #9bbc0f;
-            border: 2px solid #0f380f;
-            border-bottom-width: 4px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 8px;
+            background-color: var(--btn-face);
+            color: var(--text);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo), 2px 2px 0 rgba(0,0,0,0.3);
+            font-family: var(--mac-font);
+            font-size: 11px;
+            font-weight: bold;
             display: none;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: transform 0.08s ease, border-bottom-width 0.08s ease, opacity 0.15s;
+            transition: transform 0.05s ease;
         }
         #topBtn.visible { display: flex; }
-        #topBtn:hover { opacity: 1; }
-        #topBtn:active { transform: translateY(2px); border-bottom-width: 2px; }
+        #topBtn:active { transform: translateY(1px); box-shadow: inset -1px -1px 0 var(--line-hi), inset 1px 1px 0 var(--line-lo); }
 
         /* ── Loading Screen ── */
         #loading-screen {
             position: fixed;
             inset: 0;
-            background-color: #306230;
+            background: radial-gradient(ellipse at 50% 20%, var(--desktop-b), var(--desktop-a));
             display: flex;
             justify-content: center;
             align-items: center;
@@ -87,104 +100,120 @@
             cursor: pointer;
         }
 
-        /* ── Header ── */
-        header { text-align: center; margin-bottom: 30px; }
+        /* ── Header ── acting as the window's title bar area */
+        header {
+            text-align: center;
+            margin-bottom: 0;
+            background: repeating-linear-gradient(180deg, var(--line-hi) 0px, #bcbcbc 4px);
+            border-bottom: 2px solid var(--win-border);
+            padding: 10px 10px 14px;
+        }
 
         .header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 0 10px;
+            margin-bottom: 8px;
+            padding: 0 2px;
         }
 
         h1 {
-            font-size: 28px;
-            color: #0f380f;
-            letter-spacing: 2px;
-            margin-top: 50px;
-            margin-bottom: 60px;
+            display: inline-block;
+            font-family: var(--mac-title-font);
+            font-style: italic;
+            font-weight: 700;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            color: var(--text);
+            margin: 2px auto 10px;
+            background: var(--win-bg);
+            padding: 1px 12px;
+            border: 1px solid var(--win-border);
         }
 
         /* ── Navigation Tabs ── */
         .nav-tabs {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
-            margin-top: 30px;
-            margin-bottom: 10px;
+            gap: 4px;
+            margin-top: 6px;
+            margin-bottom: 2px;
         }
 
         .tab-btn {
-            background: none;
-            border: 2px solid #0f380f;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
             border-radius: 0;
-            padding: 8px 15px;
-            font-family: inherit;
+            padding: 5px 11px;
+            font-family: var(--mac-font);
             font-size: 11px;
             cursor: pointer;
-            color: #0f380f;
-            transition: transform 0.08s ease, background-color 0.1s;
+            color: var(--text);
         }
 
         .tab-btn.active {
-            background-color: #306230;
-            color: #9bbc0f;
+            background: var(--navy-a);
+            color: #eee;
+            box-shadow: inset -1px -1px 0 rgba(255,255,255,0.15), inset 1px 1px 0 rgba(0,0,0,0.25);
         }
 
-        /* ── Pixel Buttons (shared press effect) ── */
+        /* ── Buttons (shared press effect) ── */
         .btn-pixel {
-            background-color: #306230;
-            color: #9bbc0f;
-            border: 2px solid #0f380f;
-            border-bottom-width: 4px;
-            padding: 8px 15px;
+            background-color: var(--btn-face);
+            color: var(--text);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
+            padding: 6px 14px;
             border-radius: 0;
-            font-size: 10px;
+            font-size: 11px;
             cursor: pointer;
-            font-family: 'Press Start 2P';
-            transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+            font-family: var(--mac-font);
+            font-weight: bold;
         }
 
-        /* ── Arcade Press Effect ── */
+        /* ── Press Effect ── */
         .btn-pixel:active,
         .tab-btn:active {
-            transform: translateY(2px);
+            transform: translateY(1px);
         }
 
         .btn-pixel:active {
-            border-bottom-width: 2px;
+            box-shadow: inset -1px -1px 0 var(--line-hi), inset 1px 1px 0 var(--line-lo);
         }
 
         /* ── Editor Box ── */
         .editor-box {
-            background-color: #9bbc0f;
-            border: 1px solid #0f380f;
-            padding: 15px;
-            margin-bottom: 20px;
-            transition: border-color 0.15s, background-color 0.15s;
+            background-color: var(--win-bg-light);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
+            padding: 12px;
+            margin: 14px 10px 20px;
         }
 
         .editor-box.drag-over {
-            background-color: #8bac0f;
+            background-color: var(--sunken);
         }
 
         .post-input {
             width: 100%;
-            background: transparent;
-            border: none;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
             resize: vertical;
-            font-family: sans-serif;
-            font-size: 14px;
+            font-family: var(--mac-font);
+            font-size: 13px;
             outline: none;
-            min-height: 100px;
-            color: #0f380f;
+            min-height: 90px;
+            padding: 6px;
+            color: var(--text);
         }
 
         .editor-controls {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
+            gap: 8px;
             margin-top: 10px;
         }
 
@@ -200,218 +229,204 @@
             position: relative;
             width: 50px;
             height: 50px;
-            border: 1px solid #0f380f;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
         }
 
         .preview-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
+            filter: grayscale(1) contrast(1.1) brightness(1.05);
         }
 
         .preview-remove {
             position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #8bac0f;
-            color: #0f380f;
+            top: -6px;
+            right: -6px;
+            background: var(--btn-face);
+            color: var(--text);
+            border: 1px solid var(--win-border);
             border-radius: 0;
-            width: 18px;
-            height: 18px;
-            font-size: 12px;
+            width: 16px;
+            height: 16px;
+            font-size: 11px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             z-index: 10;
-            font-family: sans-serif;
+            font-family: var(--mac-font);
         }
 
         /* ── Post List ── */
         .post-item {
-            border-bottom: 1px solid #0f380f;
-            padding: 15px 0;
-            color: #0f380f;
+            border-bottom: 1px solid var(--line-lo);
+            padding: 12px 10px;
+            color: var(--text);
             display: flex;
             flex-direction: column;
         }
-
-        .post-item > div:nth-child(2) { white-space: pre-wrap; word-break: break-all; }
 
         .post-actions {
             align-self: flex-end;
             display: flex;
             gap: 8px;
-            font-size: 7px;
-            color: #0f380f;
+            font-size: 9px;
+            color: var(--text-soft);
             cursor: pointer;
             margin-bottom: 5px;
         }
 
-        /* ── Diary Cards ── */
+        /* ── Diary Cards — reworked as classic Mac document icons/panels
+           (the game-cartridge look and its fake A/B buttons are gone) ── */
+
+        #diary-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 0 10px;
+        }
         .diary-card {
-            background-color: #306230;
-            border: 2px solid #0f380f;
-            margin-bottom: 25px;
-            padding: 15px;
+            background-color: var(--win-bg-light);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo), 2px 2px 0 rgba(0,0,0,0.15);
+            margin: 0;
+            padding: 12px;
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            transition: transform 0.08s ease, border-bottom-width 0.08s ease;
-            border-bottom-width: 5px;
         }
 
         .diary-card:active {
-            transform: translateY(3px);
-            border-bottom-width: 2px;
+            box-shadow: inset -1px -1px 0 var(--line-hi), inset 1px 1px 0 var(--line-lo);
         }
 
         .diary-thumb {
             width: 100%;
-            aspect-ratio: 16/9;
+            aspect-ratio: 4/3;
             object-fit: cover;
-            border: 1px solid #0f380f;
-            background-color: #306230;
-            margin-bottom: 12px;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+            background-color: var(--sunken);
+            margin-bottom: 10px;
             display: block;
-            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
+            filter: grayscale(1) contrast(1.1) brightness(1.05);
         }
 
         .diary-card-title {
-            color: #9bbc0f;
-            font-family: sans-serif;
+            color: var(--text);
+            font-family: var(--mac-font);
             font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
             margin-bottom: 2px;
         }
 
         .diary-card-date {
-            color: #9bbc0f;
-            font-size: 8px;
-            font-family: 'Press Start 2P';
-            opacity: 0.8;
-            letter-spacing: -0.5px;
-        }
-
-        .gb-buttons {
-            position: absolute;
-            right: 15px;
-            bottom: 15px;
-            display: flex;
-            gap: 8px;
-            transform: rotate(-30deg);
-        }
-
-        .gb-btn {
-            width: 22px;
-            height: 22px;
-            background-color: #0f380f;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Press Start 2P';
+            color: var(--text-soft);
             font-size: 10px;
-            color: #8bac0f;
+            font-family: var(--mac-font);
+            letter-spacing: 0;
         }
 
         /* ── Diary Detail View ── */
         #diary-detail-view {
             display: none;
-            color: #0f380f;
+            color: var(--text);
             min-height: 500px;
-            padding-bottom: 50px;
+            padding: 0 10px 50px;
         }
 
         .detail-header-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid #0f380f;
+            border-bottom: 2px solid var(--win-border);
             padding-bottom: 10px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .detail-title {
-            font-size: 20px;
-            font-family: sans-serif;
+            font-size: 17px;
+            font-family: var(--mac-font);
             font-weight: bold;
-            margin-bottom: 5px;
-            color: #0f380f;
+            margin-bottom: 4px;
+            color: var(--text);
         }
 
         .detail-date {
-            font-family: 'Press Start 2P';
-            font-size: 10px;
-            color: #306230;
+            font-family: var(--mac-font);
+            font-size: 11px;
+            color: var(--text-soft);
         }
 
         .detail-actions {
             display: flex;
             gap: 10px;
-            font-size: 8px;
-            font-family: 'Press Start 2P';
-            color: #0f380f;
+            font-size: 10px;
+            font-family: var(--mac-font);
+            font-weight: bold;
+            color: var(--navy-a);
             cursor: pointer;
         }
 
         .detail-images img {
             width: 100%;
-            margin-bottom: 15px;
-            border: 1px solid #0f380f;
+            margin-bottom: 12px;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
             cursor: zoom-in;
-            filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);
+            filter: grayscale(1) contrast(1.1) brightness(1.05);
         }
 
         .detail-content {
-            font-family: sans-serif;
-            font-size: 15px;
-            line-height: 1.7;
-            color: #0f380f;
-            margin-bottom: 30px;
+            font-family: var(--mac-font);
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+            margin-bottom: 26px;
         }
 
         /* ── Diary Full Editor ── */
         #diary-full-editor {
             display: none;
-            background-color: #9bbc0f;
-            border: 1px solid #0f380f;
-            padding: 20px;
+            margin: 0 10px;
         }
 
         #diaryTitleInput {
             width: 100%;
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid #0f380f;
-            font-family: sans-serif;
-            font-size: 18px;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+            font-family: var(--mac-font);
+            font-size: 15px;
             font-weight: bold;
-            padding: 10px 0;
+            padding: 7px 8px;
             outline: none;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         #diaryContentInput {
             width: 100%;
-            background: transparent;
-            border: none;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
             resize: none;
-            font-family: sans-serif;
-            font-size: 14px;
+            font-family: var(--mac-font);
+            font-size: 13px;
             outline: none;
-            min-height: 250px;
-            line-height: 1.6;
+            min-height: 240px;
+            line-height: 1.5;
+            padding: 8px;
         }
 
-        /* ── Image Modal ── */
+        /* ── Image Modal — styled as a classic Mac dialog window ── */
         #imgModal {
             display: none;
             position: fixed;
             z-index: 9999;
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.55);
             justify-content: center;
             align-items: center;
             cursor: default;
@@ -424,6 +439,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            background: var(--win-bg);
+            border: 2px solid var(--win-border);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
         }
         #modalImgWrap.zoomed {
             align-items: flex-start;
@@ -438,6 +456,7 @@
             object-fit: contain;
             user-select: none;
             display: block;
+            filter: grayscale(1) contrast(1.1) brightness(1.05);
         }
         #modalImgWrap.zoomed #modalImg {
             max-width: none;
@@ -446,77 +465,77 @@
 
         #modalClose {
             position: absolute;
-            top: 16px; right: 20px;
-            color: #fff;
-            font-size: 22px;
+            top: 12px; right: 16px;
+            width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            color: var(--text);
+            font-size: 13px;
             cursor: pointer;
-            opacity: 0.7;
             line-height: 1;
         }
-        #modalClose:hover { opacity: 1; }
 
         #modalPrev, #modalNext {
             position: absolute;
             top: 50%; transform: translateY(-50%);
-            color: #fff;
-            font-size: 28px;
+            color: var(--text);
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            font-size: 18px;
             cursor: pointer;
-            opacity: 0.6;
-            padding: 10px 16px;
+            padding: 8px 12px;
             user-select: none;
-            transition: opacity 0.15s;
         }
-        #modalPrev:hover, #modalNext:hover { opacity: 1; }
         #modalPrev { left: 10px; }
         #modalNext { right: 10px; }
         #modalPrev.hidden, #modalNext.hidden { visibility: hidden; }
 
         #modalCounter {
             position: absolute;
-            bottom: 18px;
+            bottom: 14px;
             left: 50%; transform: translateX(-50%);
-            font-family: 'Press Start 2P';
-            font-size: 9px;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 1px;
+            font-family: var(--mac-font);
+            font-size: 11px;
+            color: var(--text-soft);
+            background: var(--win-bg-light);
+            border: 1px solid var(--win-border);
+            padding: 2px 8px;
         }
 
         #modalZoomControls {
             position: absolute;
-            bottom: 14px;
-            right: 20px;
+            bottom: 12px;
+            right: 16px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-family: 'Press Start 2P';
-            color: rgba(255,255,255,0.7);
+            gap: 6px;
+            font-family: var(--mac-font);
+            color: var(--text);
         }
         #modalZoomControls .zoom-btn {
             cursor: pointer;
-            padding: 4px 10px;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 4px;
+            padding: 3px 9px;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
             font-size: 12px;
             user-select: none;
-            transition: background 0.15s, opacity 0.15s;
         }
-        #modalZoomControls .zoom-btn:hover { background: rgba(255,255,255,0.12); }
         #modalZoomLabel {
-            font-size: 9px;
+            font-size: 10px;
             min-width: 38px;
             text-align: center;
+            color: var(--text-soft);
         }
 
         /* ── Misc ── */
-
         .backup-text {
-            font-size: 10px;
-            color: #0f380f;
+            font-size: 11px;
+            color: var(--text);
             cursor: pointer;
-            transition: color 0.3s;
+            font-weight: bold;
         }
-
-        .backup-text:hover { color: #ffffff; }
+        .backup-text:hover { color: var(--navy-a); }
 
         /* ── Pagination ── */
         .pagination {
@@ -524,94 +543,82 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
-            margin-top: 20px;
+            margin-top: 18px;
             padding-bottom: 20px;
             flex-wrap: wrap;
         }
 
         .page-btn {
             cursor: pointer;
-            color: #0f380f;
-            font-family: 'Press Start 2P';
-            font-size: 10px;
-            transition: transform 0.08s ease;
-            padding: 2px 3px;
+            color: var(--text);
+            font-family: var(--mac-font);
+            font-size: 12px;
+            padding: 2px 5px;
         }
-
-        .page-btn:active { transform: scale(0.9); }
-        .page-btn.active { color: #306230; text-decoration: underline; }
+        .page-btn.active { color: var(--navy-a); font-weight: bold; text-decoration: underline; }
 
         .page-ellipsis {
-            color: #306230;
-            opacity: 0.5;
-            font-family: 'Press Start 2P';
-            font-size: 10px;
+            color: var(--text-soft);
+            font-family: var(--mac-font);
+            font-size: 12px;
         }
 
         .page-nav {
             cursor: pointer;
-            color: #0f380f;
-            font-family: 'Press Start 2P';
-            font-size: 9px;
-            opacity: 0.75;
-            transition: opacity 0.15s, transform 0.08s ease;
+            color: var(--text);
+            font-family: var(--mac-font);
+            font-size: 11px;
             padding: 2px 4px;
         }
-        .page-nav:hover { opacity: 1; }
-        .page-nav:active { transform: scale(0.9); }
-        .page-nav.disabled { opacity: 0.2; pointer-events: none; }
+        .page-nav.disabled { opacity: 0.35; pointer-events: none; }
 
         /* ── Global Search Bar ── */
         .global-search-bar {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 0 10px;
-            margin-bottom: 14px;
+            padding: 6px 8px;
+            margin-bottom: 0;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
         }
 
-        .search-icon { font-size: 11px; opacity: 0.4; color: #0f380f; flex-shrink: 0; }
+        .search-icon { font-size: 12px; opacity: 0.6; color: var(--text); flex-shrink: 0; }
 
         .search-input {
             flex: 1;
             background: transparent;
             border: none;
-            border-bottom: 1px solid rgba(61, 43, 31, 0.3);
-            padding: 4px 2px;
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            color: #0f380f;
+            padding: 3px 2px;
+            font-family: var(--mac-font);
+            font-size: 12px;
+            color: var(--text);
             outline: none;
-            transition: border-color 0.2s;
         }
-
-        .search-input:focus { border-bottom-color: rgba(61, 43, 31, 0.65); }
-        .search-input::placeholder { color: #0f380f; opacity: 0.3; }
+        .search-input::placeholder { color: var(--text-soft); }
 
         .search-clear {
-            font-size: 10px;
-            color: #0f380f;
+            font-size: 12px;
+            color: var(--text-soft);
             opacity: 0;
             cursor: pointer;
-            transition: opacity 0.15s;
             flex-shrink: 0;
         }
-
-        .search-clear.visible { opacity: 0.35; }
-        .search-clear.visible:hover { opacity: 0.7; }
+        .search-clear.visible { opacity: 1; }
 
         .search-count {
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            color: #306230;
+            font-family: var(--mac-font);
+            font-size: 11px;
+            color: var(--text-soft);
             text-align: right;
-            margin-bottom: 10px;
+            margin: 6px 10px;
             min-height: 14px;
         }
 
         mark.hl {
-            background: #8bac0f;
-            color: #0f380f;
+            background: #ffe28a;
+            color: var(--text);
             border-radius: 0;
             padding: 0 1px;
         }
@@ -620,29 +627,26 @@
             display: flex;
             justify-content: flex-start;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
+            gap: 8px;
+            margin: 10px 10px 8px;
             flex-wrap: wrap;
         }
 
         .img-filter-btn {
-            background: none;
-            border: 1px solid #0f380f;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
             border-radius: 0;
-            padding: 3px 8px;
-            font-family: 'Press Start 2P';
-            font-size: 7px;
-            color: #0f380f;
+            padding: 3px 9px;
+            font-family: var(--mac-font);
+            font-size: 10px;
+            color: var(--text);
             cursor: pointer;
-            opacity: 0.6;
-            transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
         }
-        .img-filter-btn:hover { opacity: 0.9; }
-        .img-filter-btn:active { transform: scale(0.94); }
         .img-filter-btn.active {
-            background-color: #0f380f;
-            color: #9bbc0f;
-            opacity: 1;
+            background-color: var(--navy-a);
+            color: #eee;
+            box-shadow: inset -1px -1px 0 rgba(255,255,255,0.15), inset 1px 1px 0 rgba(0,0,0,0.25);
         }
 
         /* ── Multi-select move ── */
@@ -650,13 +654,13 @@
             width: 14px;
             height: 14px;
             margin-right: 6px;
-            accent-color: #306230;
+            accent-color: var(--navy-a);
             cursor: pointer;
             flex-shrink: 0;
         }
 
         .post-item.selected {
-            background-color: rgba(138, 74, 74, 0.12);
+            background-color: rgba(38, 53, 110, 0.10);
         }
 
         .bulk-move-bar {
@@ -667,16 +671,17 @@
             z-index: 950;
             width: calc(100% - 28px);
             max-width: 452px;
-            background-color: #0f380f;
-            color: #9bbc0f;
-            border: 2px solid #0f380f;
-            border-bottom-width: 4px;
+            background-color: var(--win-bg);
+            color: var(--text);
+            border: 2px solid var(--win-border);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
             border-radius: 0;
             padding: 10px 12px;
+            display: flex;
             align-items: center;
             justify-content: space-between;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 9px;
+            font-family: var(--mac-font);
+            font-size: 11px;
             gap: 10px;
         }
 
@@ -687,14 +692,13 @@
         }
 
         .bulk-move-btn {
-            padding: 6px 10px;
-            font-size: 8px;
-            border-bottom-width: 3px;
+            padding: 5px 10px;
+            font-size: 10px;
         }
 
         /* ── Hashtags ── */
         .hashtag {
-            color: #306230;
+            color: var(--navy-a);
             font-weight: bold;
             cursor: pointer;
         }
@@ -704,55 +708,43 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background-color: #8bac0f;
-            color: #0f380f;
+            background-color: var(--sunken);
+            color: var(--text);
+            border: 1px solid var(--win-border);
             border-radius: 0;
             padding: 3px 8px;
-            font-family: 'Press Start 2P';
-            font-size: 7px;
+            font-family: var(--mac-font);
+            font-size: 10px;
         }
-        .hashtag-badge-clear {
-            cursor: pointer;
-            opacity: 0.8;
-        }
-        .hashtag-badge-clear:hover { opacity: 1; }
+        .hashtag-badge-clear { cursor: pointer; }
 
         .tag-cloud {
             display: flex;
             flex-wrap: wrap;
             gap: 6px;
-            margin: 10px 0;
+            margin: 10px 10px;
         }
         .tag-cloud:empty { margin: 0; }
         .tag-cloud-item {
-            background: none;
-            border: 1px solid #0f380f;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
             border-radius: 0;
             padding: 3px 9px;
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            color: #0f380f;
+            font-family: var(--mac-font);
+            font-size: 11px;
+            color: var(--text);
             cursor: pointer;
-            opacity: 0.75;
-            transition: opacity 0.15s, background-color 0.1s, transform 0.08s ease;
         }
-        .tag-cloud-item:hover { opacity: 1; }
-        .tag-cloud-item:active { transform: scale(0.94); }
         .tag-cloud-item.active {
-            background-color: #8bac0f;
-            border-color: #8bac0f;
-            color: #0f380f;
-            opacity: 1;
+            background-color: var(--navy-a);
+            color: #eee;
+            box-shadow: inset -1px -1px 0 rgba(255,255,255,0.15), inset 1px 1px 0 rgba(0,0,0,0.25);
         }
 
-        /* ── Arcade Loading / Error Text ── */
+        /* ── Loading / Error Text ── */
         .bounce-letter {
             display: inline-block;
-            animation: letterBounce 1s ease-in-out infinite;
-        }
-        @keyframes letterBounce {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-6px); }
         }
 
         .fail-flicker {
@@ -760,44 +752,193 @@
             animation: failFlicker 1s steps(2, start) infinite;
         }
         @keyframes failFlicker {
-            0%, 100% { opacity: 1; color: #0f380f; }
-            50%      { opacity: 0.35; color: #306230; }
+            0%, 100% { opacity: 1; color: var(--text); }
+            50%      { opacity: 0.4; color: var(--text-soft); }
         }
 
         .retry-link {
             display: inline-block;
             text-decoration: underline;
             cursor: pointer;
-            color: #306230;
+            color: var(--navy-a);
         }
 
-        /* ── Animations ── */
+        /* ── Loading blink ── */
         @keyframes blink-color {
-            0%, 100% { color: #9bbc0f; }
-            50% { color: #8bac0f; }
+            0%, 100% { color: var(--text); }
+            50% { color: var(--text-soft); }
         }
 
         .blinking-text {
-            font-family: 'Press Start 2P';
-            font-size: 16px;
+            font-family: var(--mac-title-font);
+            font-style: italic;
+            font-weight: 700;
+            font-size: 18px;
             animation: blink-color 1s infinite;
+            background: var(--win-bg);
+            padding: 10px 22px;
+            border: 2px solid var(--win-border);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
         }
 
-        /* ── Coin insert flash on load ── */
+        /* ── window-open flash ── */
         @keyframes coin-flash {
-            0%   { opacity: 0; transform: scale(0.85); }
-            15%  { opacity: 1; transform: scale(1.05); }
+            0%   { opacity: 0; transform: scale(0.97); }
             100% { opacity: 1; transform: scale(1); }
         }
 
-        #app { animation: coin-flash 0.4s ease-out both; }
+        #app { animation: coin-flash 0.25s ease-out both; }
+
+        /* ── Avatars (프로필 사진) ── */
+        :root {
+            --avatar-me: none;
+            --avatar-ai: none;
+            --avatar-me-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23c4c4c4'/%3E%3Ccircle cx='24' cy='19' r='8' fill='%232b2b2b'/%3E%3Cpath d='M8 48c0-11 7-17 16-17s16 6 16 17z' fill='%232b2b2b'/%3E%3C/svg%3E");
+            --avatar-ai-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%232b2b2b'/%3E%3Crect x='23' y='4' width='2' height='9' fill='%23e8e8e8'/%3E%3Crect x='21' y='3' width='6' height='4' fill='%23e8e8e8'/%3E%3Crect x='10' y='13' width='28' height='24' fill='%23e8e8e8'/%3E%3Crect x='16' y='20' width='5' height='5' fill='%232b2b2b'/%3E%3Crect x='27' y='20' width='5' height='5' fill='%232b2b2b'/%3E%3Crect x='17' y='30' width='14' height='3' fill='%232b2b2b'/%3E%3C/svg%3E");
+        }
+        .avatar {
+            flex: 0 0 40px;
+            width: 40px;
+            height: 40px;
+            border-radius: 0;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+            background-color: var(--sunken);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .avatar-lg { flex-basis: 64px; width: 64px; height: 64px; }
+        .avatar-me { background-image: var(--avatar-me-default); }
+        .avatar-ai { background-image: var(--avatar-ai-default); }
+        .avatar-me.photo { background-image: var(--avatar-me); filter: grayscale(1) contrast(1.1) brightness(1.05); }
+        .avatar-ai.photo { background-image: var(--avatar-ai); filter: grayscale(1) contrast(1.1) brightness(1.05); }
+
+        /* ── Tweet-style post ── */
+        .tweet-row  { display: flex; gap: 10px; align-items: flex-start; }
+        .tweet-main { flex: 1; min-width: 0; }
+        .tweet-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 2px 6px;
+            margin-bottom: 4px;
+            padding-right: 10px;
+            font-family: var(--mac-font);
+        }
+        .tweet-name   { font-weight: bold; font-size: 13px; color: var(--text); }
+        .tweet-handle { font-size: 12px; color: var(--text-soft); }
+        .tweet-date   { font-family: var(--mac-font); font-size: 10px; color: var(--text-soft); }
+        .tweet-body {
+            font-family: var(--mac-font);
+            font-size: 14px;
+            padding-right: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* ── Settings panel ── */
+        #settings-view { display: none; color: var(--text); padding: 0 10px 50px; }
+        .settings-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; }
+        .settings-card {
+            background-color: var(--win-bg-light);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+        .settings-label { font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+        .profile-edit-row { display: flex; gap: 12px; align-items: flex-start; }
+        .profile-edit-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+        .profile-edit-btns { display: flex; gap: 8px; margin-top: 4px; }
+        .btn-small { font-size: 10px; padding: 5px 9px; }
+        .settings-input {
+            width: 100%;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+            outline: none;
+            font-family: var(--mac-font);
+            font-size: 13px;
+            color: var(--text);
+            padding: 5px 6px;
+            border-radius: 0;
+        }
+        .settings-textarea {
+            width: 100%;
+            min-height: 160px;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+            outline: none;
+            resize: vertical;
+            font-family: var(--mac-font);
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text);
+            padding: 8px;
+            border-radius: 0;
+        }
+        .settings-hint { font-family: var(--mac-font); font-size: 11px; line-height: 1.5; color: var(--text-soft); margin-top: 6px; }
+        .settings-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 18px;
+            margin-top: 12px;
+            font-family: var(--mac-font);
+            font-size: 12px;
+        }
+        .settings-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .settings-num { width: 52px; text-align: center; }
+        .ai-status { font-family: var(--mac-font); font-size: 12px; line-height: 1.7; word-break: break-all; }
+
+        /* ── Toast — a small system alert strip ── */
+        #toast {
+            position: fixed;
+            left: 14px;
+            bottom: 14px;
+            max-width: calc(100% - 100px);
+            z-index: 1500;
+            display: none;
+            background: var(--win-bg);
+            color: var(--text);
+            border: 2px solid var(--win-border);
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+            font-family: var(--mac-font);
+            font-size: 12px;
+            line-height: 1.4;
+            padding: 7px 12px;
+        }
+        #toast.show { display: block; }
+
+        /* ── Move popup — a small classic menu ── */
+        .move-popup {
+            position: absolute;
+            z-index: 2000;
+            background: var(--win-bg-light);
+            border: 1px solid var(--win-border);
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            min-width: 90px;
+        }
+        .move-popup-option {
+            padding: 6px 10px;
+            font-family: var(--mac-font);
+            font-size: 12px;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .move-popup-option:hover { background: var(--navy-a); color: #eee; }
+        .move-popup-option + .move-popup-option { border-top: 1px solid var(--line-lo); }
     </style>
 </head>
 <body>
 
 <!-- Loading Screen -->
 <div id="loading-screen" onclick="enterApp()">
-    <div class="blinking-text">PRESS START</div>
+    <div class="blinking-text">Loading...</div>
 </div>
 
 <div id="app">
@@ -809,95 +950,24 @@
         </div>
         <div class="header-row">
             <span class="backup-text" onclick="backupToMarkdown()">🔄 REPORT</span>
+            <span class="backup-text" onclick="openSettings()">🐦 TWT</span>
         </div>
 
         <h1>NALLEUM</h1>
 
         <div class="nav-tabs" id="nav-tabs-row">
-            <button id="tabBubble" class="tab-btn active" onclick="switchTab('BUBBLE')" oncontextmenu="event.preventDefault(); deleteBoard('BUBBLE')">BUBBLE</button>
-            <button id="tabNin"    class="tab-btn"        onclick="switchTab('NIN')"    oncontextmenu="event.preventDefault(); deleteBoard('NIN')">NIN</button>
-            <button id="tabNeg"    class="tab-btn"        onclick="switchTab('NEG')"    oncontextmenu="event.preventDefault(); deleteBoard('NEG')">NEG</button>
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
             <button id="tabAddBoard" class="tab-btn" onclick="createNewBoard()" title="새 게시판 만들기">+</button>
         </div>
     </header>
 
-    <!-- BUBBLE Tab -->
-    <div id="bubble-container">
-        <div class="editor-box" id="bubble-editor-box">
-            <textarea id="bubble-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
-            <!-- 해시태그선택 -->
-            <div id="bubble-insert-tags" class="tag-cloud" style="margin-top: 10px; padding-top: 10px;"></div>
-            <div id="bubble-previews" class="preview-container"></div>
-            <div class="editor-controls">
-                <input type="file" id="bubbleFile" multiple accept="image/*" onchange="handleImg(this, 'BUBBLE')" style="display:none">
-                <button class="btn-pixel" onclick="document.getElementById('bubbleFile').click()">IMG</button>
-                <button id="bubbleSendBtn" class="btn-pixel" onclick="savePost('BUBBLE')">SEND</button>
-            </div>
-        </div>
-        <div class="tag-cloud" id="bubble-tag-cloud"></div>
-        <div class="filter-bar">
-            <span class="img-filter-btn" id="bubble-img-filter" onclick="toggleImgFilter('BUBBLE')">💚 IMG ONLY</span>
-            <span class="img-filter-btn" id="bubble-select-toggle" onclick="toggleSelectMode('BUBBLE')">✅ SELECT</span>
-            <span id="bubble-hashtag-badge"></span>
-        </div>
-        <div class="search-count" id="bubble-search-count"></div>
-        <div id="bubble-list"></div>
-        <div id="bubble-pagination" class="pagination"></div>
-    </div>
-
-    <!-- NIN Tab -->
-    <div id="nin-container" style="display:none">
-        <div class="editor-box" id="nin-editor-box">
-            <textarea id="nin-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
-            <!-- 해시태그선택 -->
-            <div id="nin-insert-tags" class="tag-cloud" style="margin-top: 10px; padding-top: 10px;"></div>
-            <div id="nin-previews" class="preview-container"></div>
-            <div class="editor-controls">
-                <input type="file" id="ninFile" multiple accept="image/*" onchange="handleImg(this, 'NIN')" style="display:none">
-                <button class="btn-pixel" onclick="document.getElementById('ninFile').click()">IMG</button>
-                <button id="ninSendBtn" class="btn-pixel" onclick="savePost('NIN')">SEND</button>
-            </div>
-        </div>
-        <div class="tag-cloud" id="nin-tag-cloud"></div>
-        <div class="filter-bar">
-            <span class="img-filter-btn" id="nin-img-filter" onclick="toggleImgFilter('NIN')">💚 IMG ONLY</span>
-            <span class="img-filter-btn" id="nin-select-toggle" onclick="toggleSelectMode('NIN')">✅ SELECT</span>
-            <span id="nin-hashtag-badge"></span>
-        </div>
-        <div class="search-count" id="nin-search-count"></div>
-        <div id="nin-list"></div>
-        <div id="nin-pagination" class="pagination"></div>
-    </div>
-
-    <!-- NEG Tab -->
-    <div id="neg-container" style="display:none">
-        <div class="editor-box" id="neg-editor-box">
-            <textarea id="neg-text" class="post-input" placeholder="무슨 일이 일어나고 있나요"></textarea>
-            <!-- 해시태그선택 -->
-            <div id="neg-insert-tags" class="tag-cloud" style="margin-top: 10px; padding-top: 10px;"></div>
-            <div id="neg-previews" class="preview-container"></div>
-            <div class="editor-controls">
-                <input type="file" id="negFile" multiple accept="image/*" onchange="handleImg(this, 'NEG')" style="display:none">
-                <button class="btn-pixel" onclick="document.getElementById('negFile').click()">IMG</button>
-                <button id="negSendBtn" class="btn-pixel" onclick="savePost('NEG')">SEND</button>
-            </div>
-        </div>
-        <div class="tag-cloud" id="neg-tag-cloud"></div>
-        <div class="filter-bar">
-            <span class="img-filter-btn" id="neg-img-filter" onclick="toggleImgFilter('NEG')">💚 IMG ONLY</span>
-            <span class="img-filter-btn" id="neg-select-toggle" onclick="toggleSelectMode('NEG')">✅ SELECT</span>
-            <span id="neg-hashtag-badge"></span>
-        </div>
-        <div class="search-count" id="neg-search-count"></div>
-        <div id="neg-list"></div>
-        <div id="neg-pagination" class="pagination"></div>
-    </div>
+    <!-- 게시판(BUBBLE/NIN/NEG/커스텀)의 탭·컨테이너는 addBoardUI()가 자바스크립트로 만든다 -->
+    <div id="tab-placeholder" style="color:#2b2b2b; text-align:center; padding:20px; font-size:10px;">LOADING...</div>
 
     <!-- DIARY Tab -->
     <div id="diary-container" style="display:none">
-        <div style="text-align:right; margin-bottom:15px;">
-            <span style="font-size:10px; color:#0f380f; cursor:pointer; font-family:'Press Start 2P';"
+        <div style="text-align:right; margin:10px;">
+            <span style="font-size:10px; color:#2b2b2b; cursor:pointer; font-family:'Geneva','Tahoma','Verdana',sans-serif;"
                   onclick="openDiaryEditor()">+ NEW ADVENTURE</span>
         </div>
         <div class="search-count" id="diary-search-count"></div>
@@ -919,13 +989,13 @@
         <div id="detailImages"  class="detail-images"></div>
         <div id="detailContent" class="detail-content"></div>
         <div class="editor-controls">
-            <button class="btn-pixel" style="background:#8bac0f; color:#0f380f;" onclick="closeDiaryDetail()">CLOSE</button>
+            <button class="btn-pixel" style="background:#c4c4c4; color:#2b2b2b;" onclick="closeDiaryDetail()">CLOSE</button>
         </div>
     </div>
 
     <!-- Diary Editor -->
     <div id="diary-full-editor" style="display:none">
-        <div id="diary-editor-box" style="background:#9bbc0f; padding:15px; border:1px solid #0f380f; transition: border-color 0.15s, background-color 0.15s;">
+        <div id="diary-editor-box" style="background:#e8e8e8; padding:15px; border:1px solid #2b2b2b; transition: border-color 0.15s, background-color 0.15s;">
         <input type="text" id="diaryTitleInput" placeholder="제목">
         <textarea id="diaryContentInput" placeholder="내용"></textarea>
         <div id="diary-previews" class="preview-container"></div>
@@ -933,11 +1003,76 @@
             <input type="file" id="diaryFile" multiple accept="image/*" onchange="handleImg(this, 'DIARY')" style="display:none">
             <button class="btn-pixel" onclick="document.getElementById('diaryFile').click()">IMG</button>
             <button class="btn-pixel" id="diarySendBtn" onclick="savePost('DIARY')">SEND</button>
-            <button class="btn-pixel" style="background:#8bac0f; color:#0f380f;" onclick="closeDiaryEditor()">BACK</button>
+            <button class="btn-pixel" style="background:#c4c4c4; color:#2b2b2b;" onclick="closeDiaryEditor()">BACK</button>
         </div>
         </div>
     </div>
+
+    <!-- TWT Settings -->
+    <div id="settings-view">
+        <div class="settings-title">🐦 TWT SETTINGS</div>
+
+        <div class="settings-card">
+            <div class="settings-label">STATUS</div>
+            <div id="ai-status" class="ai-status"></div>
+        </div>
+
+        <div class="settings-card">
+            <div class="settings-label">ME</div>
+            <div class="profile-edit-row">
+                <div id="set-me-avatar" class="avatar avatar-lg avatar-me"></div>
+                <div class="profile-edit-fields">
+                    <input id="set-me-name"   class="settings-input" placeholder="이름"    maxlength="20" autocomplete="off">
+                    <input id="set-me-handle" class="settings-input" placeholder="@handle" maxlength="20" autocomplete="off">
+                    <div class="profile-edit-btns">
+                        <button class="btn-pixel btn-small" onclick="pickAvatar('me')">PHOTO</button>
+                        <button class="btn-pixel btn-small" style="background:#c4c4c4; color:#2b2b2b;" onclick="removeAvatar('me')">REMOVE</button>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="set-me-file" accept="image/*" style="display:none" onchange="onAvatarPicked('me', this)">
+        </div>
+
+        <div class="settings-card">
+            <div class="settings-label">TWT (트친)</div>
+            <div class="profile-edit-row">
+                <div id="set-ai-avatar" class="avatar avatar-lg avatar-ai"></div>
+                <div class="profile-edit-fields">
+                    <input id="set-ai-name"   class="settings-input" placeholder="이름"    maxlength="20" autocomplete="off">
+                    <input id="set-ai-handle" class="settings-input" placeholder="@handle" maxlength="20" autocomplete="off">
+                    <div class="profile-edit-btns">
+                        <button class="btn-pixel btn-small" onclick="pickAvatar('ai')">PHOTO</button>
+                        <button class="btn-pixel btn-small" style="background:#c4c4c4; color:#2b2b2b;" onclick="removeAvatar('ai')">REMOVE</button>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="set-ai-file" accept="image/*" style="display:none" onchange="onAvatarPicked('ai', this)">
+            <div class="settings-hint">사진은 96×96으로 줄여서 저장돼요 (몇 KB). 올리거나 지우면 바로 저장됩니다.</div>
+        </div>
+
+        <div class="settings-card">
+            <div class="settings-label">TWT PROMPT</div>
+            <textarea id="set-ai-prompt" class="settings-textarea" placeholder="트친의 성격·말투·나와의 관계를 적어주세요"></textarea>
+            <div class="settings-hint">
+                여기엔 성격/말투/관계만 적으면 돼요. 트윗 길이·JSON 출력 형식 같은 규칙은 코드가 자동으로 덧붙입니다.
+                <span style="text-decoration:underline; cursor:pointer;" onclick="resetAiPrompt()">기본 프롬프트로 되돌리기</span>
+            </div>
+            <div class="settings-row">
+                <label>REACT CHANCE <input id="set-ai-chance" class="settings-input settings-num" type="number" min="0" max="100" step="5"> %</label>
+                <label><input id="set-ai-enabled" type="checkbox"> ENABLED</label>
+            </div>
+            <div class="settings-hint">새 글이 1~2개 쌓였을 땐 위 확률로 반응하고, 3개 이상 쌓이면 무조건 반응해요.</div>
+        </div>
+
+        <div class="editor-controls">
+            <button class="btn-pixel" style="background:#c4c4c4; color:#2b2b2b;" onclick="reactNow()">REACT NOW</button>
+            <button class="btn-pixel" onclick="saveSettings()">SAVE</button>
+            <button class="btn-pixel" style="background:#c4c4c4; color:#2b2b2b;" onclick="closeSettings()">CLOSE</button>
+        </div>
+    </div>
 </div>
+
+<div id="toast"></div>
 
 <button id="topBtn" onclick="scrollToTop()" aria-label="맨 위로">TOP</button>
 
@@ -945,7 +1080,7 @@
     <span id="bulkMoveCount">0개 선택됨</span>
     <div class="bulk-move-actions">
         <span class="btn-pixel bulk-move-btn" onclick="openBulkMovePopup(this)">MOVE</span>
-        <span class="btn-pixel bulk-move-btn" style="background:#306230" onclick="cancelSelectMode()">CANCEL</span>
+        <span class="btn-pixel bulk-move-btn" style="background:#26356e; color:#eee;" onclick="cancelSelectMode()">CANCEL</span>
     </div>
 </div>
 
@@ -964,13 +1099,30 @@
     <div id="modalCounter"></div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     ★ TWT(AI 트친) 설정 — 여기만 고치면 됩니다
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+    // ① Gemini API 키를 따옴표 안에 붙여넣으세요.  발급: https://aistudio.google.com/apikey
+    //    (비워두면 트친 기능만 조용히 꺼지고, 나머지 앱은 그대로 동작합니다)
+    //    ※ 이 파일은 공개 배포되면 누구나 볼 수 있으니, 키는 Google Cloud 콘솔에서
+    //       "HTTP 리퍼러 제한(내 GitHub Pages 주소만 허용)"을 걸어두는 걸 권장해요.
+    const GEMINI_API_KEY = "AQ.Ab8RN6KJrziBeQvlcGIcJxEQC2WkmOwM5fWajOlrgL1GjdAArQ";
+
+    // ② 사용할 모델 ID. 모델마다 무료 티어의 하루 호출 한도(RPD)가 다르니 AI Studio의 Rate limit 화면에서 확인하세요.
+    const GEMINI_MODEL   = "Gemini 3.5 Flash Lite";
+
+    // ③ 하루 최대 호출 수(앱 안에서 세는 안전장치). 무료 한도가 20이면 20 그대로 두면 돼요.
+    const AI_DAILY_LIMIT = 20;
+</script>
+
 <!-- Firebase Module -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import {
         initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
         collection, addDoc, onSnapshot, query, orderBy,
-        doc, deleteDoc, updateDoc
+        doc, deleteDoc, updateDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import {
         getStorage, ref, uploadBytes, getDownloadURL, deleteObject
@@ -1001,7 +1153,7 @@
     window.fbActions = {
         ref, uploadBytes, getDownloadURL, deleteObject,
         addDoc, collection, onSnapshot, query, orderBy,
-        doc, deleteDoc, updateDoc
+        doc, deleteDoc, updateDoc, setDoc
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -1036,16 +1188,18 @@
     //     retry screen below is for.
     // ═══════════════════════════════════════════════════════════════
 
-    const BOARD_TYPES         = ['BUBBLE', 'NIN', 'NEG', 'DIARY'];
     const POSTS_PER_PAGE      = 20;
     const FIRST_LOAD_TIMEOUT_MS = 8000; // only matters if this device has never synced before
 
-    window.boardData           = { BUBBLE: [], NIN: [], NEG: [], DIARY: [] }; // in-memory source of truth, kept in sync by onSnapshot
-    window.currentPage         = { BUBBLE: 1, NIN: 1, NEG: 1 };
+    // in-memory source of truth, kept in sync by onSnapshot. (게시판 목록은 고정이 아니라서
+    // 여기서 초기화하지 않고, App Logic 쪽에서 게시판이 등록될 때마다 채워진다.)
+    window.boardData           = window.boardData   || {};
+    window.boardData.DIARY     = window.boardData.DIARY || [];
+    window.currentPage         = window.currentPage || {};
     window.POSTS_PER_PAGE      = POSTS_PER_PAGE;
 
-    const listEls   = { BUBBLE: 'bubble-list', NIN: 'nin-list', NEG: 'neg-list', DIARY: 'diary-list' };
-    const everLoaded = { BUBBLE: false, NIN: false, NEG: false, DIARY: false }; // has this board received ANY snapshot yet (cache or server)?
+    const listEls   = { DIARY: 'diary-list' };            // 나머지 게시판은 init()/addBoardUI()가 채운다
+    const everLoaded = { DIARY: false };                  // has this board received ANY snapshot yet (cache or server)?
     const unsubscribers = {}; // type -> onSnapshot unsubscribe fn, so a deleted custom board's listener can be torn down cleanly
 
     // These are plain objects, so exposing the reference lets the App Logic
@@ -1063,11 +1217,11 @@
     }
 
     function loadingHTML() {
-        return `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
+        return `<div style="color:#2b2b2b; text-align:center; padding:20px; font-size:10px;">${bouncyText('LOADING...')}</div>`;
     }
 
     function failHTML(retryOnclick) {
-        return `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">
+        return `<div style="color:#2b2b2b; text-align:center; padding:20px; font-size:10px;">
             <span class="fail-flicker">${bouncyText('LOAD FAILED.')}</span><br><br>
             <span class="retry-link" onclick="${retryOnclick}">💣 RETRY</span>
         </div>`;
@@ -1083,6 +1237,7 @@
             console.log(`[nalleum] ${type}: ${window.boardData[type].length} posts (${snap.metadata.fromCache ? 'from cache' : 'from server'}${snap.metadata.hasPendingWrites ? ', pending writes' : ''})`);
 
             if (window.renderBoard) window.renderBoard(type);
+            if (window.refreshTabs) window.refreshTabs();   // 글이 0개인 게시판 탭은 숨기고, 생기면 보이게
         }, err => {
             console.error(`[nalleum] ${type}: listener error`, err);
             // Only show the failure screen if this device has never synced
@@ -1130,7 +1285,11 @@
     async function init() {
         await waitForRenderBoard();
 
-        BOARD_TYPES.forEach(t => {
+        // getBoardTypes() = App Logic 쪽에 등록된 게시판들(예전 컬렉션 BUBBLE/NIN/NEG + DIARY).
+        // Firestore 클라이언트는 컬렉션 목록을 못 가져오므로, "이름을 아는" 컬렉션만 구독할 수 있다.
+        window.getBoardTypes().forEach(t => {
+            listEls[t]    = t.toLowerCase() + '-list';
+            everLoaded[t] = false;
             const el = document.getElementById(listEls[t]);
             if (el) el.innerHTML = loadingHTML();
             attachBoardListener(t);
@@ -1138,6 +1297,25 @@
         });
 
         attachBoardsMetaListener();
+        attachSettingsListeners();
+    }
+
+    // ── TWT settings — 문서 2개(각각 구독 1개, 읽기는 접속당 문서 1개씩 + 바뀔 때만) ──
+    //   _settings/profile   : 내/트친 이름·핸들·프로필 사진(작은 data URL)·프롬프트·확률
+    //   _settings/ai_state  : 트친이 마지막으로 반응한 시각, 오늘 호출 횟수
+    // 프로필 사진을 Storage에 올리지 않고 96px짜리 작은 WebP를 문서 안에 넣어서
+    // 사진 때문에 생기는 추가 읽기/네트워크 요청이 0개이고, 용량도 몇 KB 수준이다.
+    function attachSettingsListeners() {
+        onSnapshot(doc(window.db, '_settings', 'profile'), snap => {
+            if (window.onProfileData) window.onProfileData(snap.exists() ? snap.data() : {});
+        }, err => console.error('[nalleum] profile listener error', err));
+
+        onSnapshot(doc(window.db, '_settings', 'ai_state'), snap => {
+            if (window.onAiStateData) window.onAiStateData(snap.exists() ? snap.data() : {});
+        }, err => {
+            console.error('[nalleum] ai_state listener error', err);
+            if (window.onAiStateData) window.onAiStateData({});   // 실패해도 트리거가 영원히 기다리지 않게
+        });
     }
 
     // ── Custom boards — a small "_boards" collection is the source of truth
@@ -1200,6 +1378,19 @@
         }
     }
 
+    // 설정 문서 저장 (merge: 보낸 필드만 덮어씀)
+    async function saveSettingsDoc(id, data) {
+        try {
+            await window.fbActions.setDoc(window.fbActions.doc(window.db, '_settings', id), data, { merge: true });
+            return true;
+        } catch (e) {
+            console.error(`[nalleum] settings save failed (${id})`, e);
+            if (window.showToast) window.showToast('설정 저장 실패 (콘솔 확인)');
+            return false;
+        }
+    }
+
+    window.saveSettingsDoc    = saveSettingsDoc;
     window.retryLoad          = retryLoad;
     window.queueCreate        = queueCreate;
     window.queueUpdate        = queueUpdate;
@@ -1264,6 +1455,11 @@
 <!-- App Logic -->
 <script>
     // ── State ──
+    // (module 스크립트보다 먼저 실행되므로 여기서 먼저 만들어둔다)
+    window.boardData       = window.boardData || {};
+    window.boardData.DIARY = window.boardData.DIARY || [];
+    window.currentPage     = window.currentPage || {};
+
     let tempImages = [];
     let tempBlobs  = [];
     let editDiaryId = null;
@@ -1292,41 +1488,109 @@
 
     window.addEventListener('load', enterApp);
 
-    // ── Board type registry — BUBBLE/NIN/NEG/DIARY are always there; custom
-    // boards (created via createNewBoard) get added/removed here as the
-    // "_boards" Firestore collection changes. Every place that used to loop
-    // over a hardcoded board list now goes through getBoardTypes() instead,
-    // so a new board just works everywhere without extra wiring.
-    window.customBoards     = {};   // { TYPE: true }
-    window.customBoardDocId = {};   // { TYPE: '_boards' doc id }  — filled in by the meta listener
+    // ── Board registry ──
+    // 고정 게시판은 없다(DIARY 제외).
+    //  · BUBBLE/NIN/NEG 는 예전 글이 들어있는 컬렉션 "이름"일 뿐이라, 시작할 때 구독만 해두고
+    //    탭은 글이 1개 이상일 때만 보여준다. (Firestore 클라이언트는 컬렉션 목록을 가져올 수 없어서
+    //    이름을 아는 컬렉션만 확인할 수 있다.)
+    //  · "+"로 만든 게시판은 "_boards" 컬렉션에 이름이 저장되고, 마찬가지로 글이 0개면 숨겨진다.
+    //  · 방금 만든 빈 게시판은 다른 탭으로 나가기 전까지만 임시로 보여준다(글을 쓸 수 있게).
+    const LEGACY_BOARDS = ['BUBBLE', 'NIN', 'NEG'];
+    const SETTINGS_TAB  = '__SETTINGS__';
+    const APP_START     = Date.now();
+
+    window.boardOrder       = [];          // DIARY를 뺀 게시판, 탭 표시 순서
+    window.boardSet         = {};          // { TYPE: true } — 위와 같은 내용(빠른 조회용)
+    window.customBoards     = {};          // { TYPE: true } — "_boards" 컬렉션으로 만든 게시판
+    window.customBoardDocId = {};          // { TYPE: '_boards' doc id }  — meta listener가 채움
+    window.activeTab        = null;
+    window.tabBeforeSettings = null;
+    window.pendingOpenBoard = null;        // 방금 "+"로 만든 게시판 — UI가 생기면 바로 열어준다
+    window.tempVisible      = new Set();   // 글이 0개여도 잠깐 보여줄 게시판
 
     function getBoardTypes() {
-        return ['BUBBLE', 'NIN', 'NEG', 'DIARY', ...Object.keys(window.customBoards)];
+        return [...window.boardOrder, 'DIARY'];
     }
 
     function tabIdFor(type) {
         return 'tab' + type.charAt(0) + type.slice(1).toLowerCase();
     }
 
+    // 글이 1개 이상이거나(또는 임시로 열려 있는) 게시판만 보인다. DIARY는 항상 보임(별도 탭).
+    function getVisibleBoards() {
+        return window.boardOrder.filter(t =>
+            (window.boardData[t] || []).length > 0 || window.tempVisible.has(t));
+    }
+
+    function applyTabVisibility() {
+        const vis = getVisibleBoards();
+        window.boardOrder.forEach(t => {
+            const tabEl = document.getElementById(tabIdFor(t));
+            if (tabEl) tabEl.style.display = vis.includes(t) ? '' : 'none';
+        });
+    }
+
+    function showPlaceholder(on) {
+        const el = document.getElementById('tab-placeholder');
+        if (el) el.style.display = on ? 'block' : 'none';
+    }
+
+    // 처음 진입할 때, 모든 게시판이 한 번씩 로딩될 때까지(최대 2.5초) 기다렸다가 첫 탭을 고른다.
+    function initialSelectionReady() {
+        if (Date.now() - APP_START > 2500) return true;
+        if (!window.everLoaded) return false;
+        return window.boardOrder.every(t => window.everLoaded[t]);
+    }
+
+    // 게시판 데이터가 바뀔 때마다 호출: 탭 표시 갱신 + 지금 보고 있는 탭이 사라졌으면 다른 탭으로 이동
+    function refreshTabs() {
+        window.tempVisible.forEach(t => {
+            if (window.boardSet[t] && (window.boardData[t] || []).length > 0) window.tempVisible.delete(t);
+        });
+        applyTabVisibility();
+
+        const cur = window.activeTab;
+        if (cur === SETTINGS_TAB) return;
+
+        const vis   = getVisibleBoards();
+        const curOk = cur === 'DIARY' || (cur && vis.includes(cur));
+        if (curOk) return;
+
+        if (!cur && !initialSelectionReady()) { showPlaceholder(true); return; }
+
+        switchTab(vis[0] || 'DIARY');
+    }
+    window.refreshTabs = refreshTabs;
+
     // ── Tab switching ──
     function switchTab(tab) {
         if (window.currentSelectType && window.currentSelectType !== tab) cancelSelectMode();
+
+        const prev    = window.activeTab;
+        const leaving = (prev === SETTINGS_TAB) ? window.tabBeforeSettings : prev;
+        window.activeTab = tab;
+        // 떠나는 게시판이 (임시 표시 중인) 빈 게시판이면, 이제부터는 숨겨진다
+        if (leaving && leaving !== tab && tab !== SETTINGS_TAB) window.tempVisible.delete(leaving);
+
+        showPlaceholder(false);
         getBoardTypes().forEach(t => {
             const tabEl = document.getElementById(tabIdFor(t));
             if (tabEl) tabEl.classList.toggle('active', t === tab);
             const contEl = document.getElementById(t.toLowerCase() + '-container');
             if (contEl) contEl.style.display = (t === tab) ? 'block' : 'none';
         });
+        document.getElementById('settings-view').style.display      = (tab === SETTINGS_TAB) ? 'block' : 'none';
         document.getElementById('diary-full-editor').style.display  = 'none';
         document.getElementById('diary-detail-view').style.display  = 'none';
+        applyTabVisibility();
     }
 
     // ── Search ──
     window.searchQuery = '';
-    window.imgFilter = { BUBBLE: false, NIN: false, NEG: false };
-    window.hashtagFilter = { BUBBLE: null, NIN: null, NEG: null };
-    window.selectMode = { BUBBLE: false, NIN: false, NEG: false };
-    window.selectedPosts = { BUBBLE: new Set(), NIN: new Set(), NEG: new Set() };
+    window.imgFilter     = {};   // 아래 4개는 addBoardUI()가 게시판마다 채운다
+    window.hashtagFilter = {};
+    window.selectMode    = {};
+    window.selectedPosts = {};
     window.currentSelectType = null;
 
     function toggleImgFilter(type) {
@@ -1355,12 +1619,14 @@
         getBoardTypes().forEach(t => renderBoard(t));
     }
 
-    // ── Custom board lifecycle ──
-    function addCustomBoardUI(type) {
-        if (window.customBoards[type]) return; // already added
-        window.customBoards[type] = true;
+    // ── Board lifecycle ──
+    function addBoardUI(type, opts = {}) {
+        if (window.boardSet[type]) return; // already added
+        window.boardSet[type] = true;
+        window.boardOrder.push(type);
+        if (opts.custom) window.customBoards[type] = true;
 
-        window.boardData[type]     = [];
+        window.boardData[type]     = window.boardData[type] || [];
         window.currentPage[type]   = 1;
         window.imgFilter[type]     = false;
         window.hashtagFilter[type] = null;
@@ -1371,14 +1637,16 @@
 
         const lower = type.toLowerCase();
 
+        // 탭은 만들어두되, 글이 생기기 전까지는 숨겨둔다 (refreshTabs/applyTabVisibility가 결정)
         const tabBtn = document.createElement('button');
         tabBtn.id = tabIdFor(type);
         tabBtn.className = 'tab-btn';
+        tabBtn.style.display = 'none';
         tabBtn.textContent = type;
         tabBtn.onclick = () => switchTab(type);
         tabBtn.oncontextmenu = (e) => { e.preventDefault(); deleteBoard(type); };
-        const addBtn = document.getElementById('tabAddBoard');
-        if (addBtn && addBtn.parentNode) addBtn.parentNode.insertBefore(tabBtn, addBtn);
+        const diaryTab = document.getElementById('tabDiary');
+        if (diaryTab && diaryTab.parentNode) diaryTab.parentNode.insertBefore(tabBtn, diaryTab);
 
         const container = document.createElement('div');
         container.id = lower + '-container';
@@ -1411,22 +1679,36 @@
         const listEl = document.getElementById(lower + '-list');
         if (listEl && window.loadingHTML) listEl.innerHTML = window.loadingHTML();
 
+        // 시작 시점의 예전 게시판(BUBBLE/NIN/NEG)은 아직 module 스크립트가 로드되기 전이라
+        // 여기서는 건너뛰고, module의 init()가 한꺼번에 구독한다.
         if (window.attachBoardListener)   window.attachBoardListener(type);
         if (window.armFirstLoadTimeout)   window.armFirstLoadTimeout(type);
+
+        // 방금 "+"로 만든 게시판이면 UI가 생기자마자 바로 열어준다
+        if (window.pendingOpenBoard === type) {
+            window.pendingOpenBoard = null;
+            window.tempVisible.add(type);
+            switchTab(type);
+            window.scrollTo(0, 0);
+        } else if (opts.custom) {
+            refreshTabs();
+        }
     }
 
-    function removeCustomBoardUI(type) {
-        if (!window.customBoards[type]) return;
+    function removeBoardUI(type) {
+        if (!window.boardSet[type]) return;
 
-        const tabEl = document.getElementById(tabIdFor(type));
-        const wasActive = !!(tabEl && tabEl.classList.contains('active'));
+        const wasActive = window.activeTab === type;
 
         if (window.unsubscribers && window.unsubscribers[type]) {
             window.unsubscribers[type]();
             delete window.unsubscribers[type];
         }
 
+        delete window.boardSet[type];
+        window.boardOrder = window.boardOrder.filter(t => t !== type);
         delete window.customBoards[type];
+        window.tempVisible.delete(type);
         delete window.boardData[type];
         delete window.currentPage[type];
         delete window.imgFilter[type];
@@ -1438,20 +1720,21 @@
 
         if (window.currentSelectType === type) window.currentSelectType = null;
 
+        const tabEl = document.getElementById(tabIdFor(type));
         if (tabEl) tabEl.remove();
         const containerEl = document.getElementById(type.toLowerCase() + '-container');
         if (containerEl) containerEl.remove();
 
-        if (wasActive) switchTab('BUBBLE');
+        if (wasActive) window.activeTab = null;
+        refreshTabs();
     }
 
     // Called from the Firebase module's "_boards" listener whenever the
     // list of custom boards changes — reconciles the DOM to match exactly,
     // whether the change came from this device or another one.
     function reconcileCustomBoards(names) {
-        const current = Object.keys(window.customBoards);
-        names.forEach(name => { if (!window.customBoards[name]) addCustomBoardUI(name); });
-        current.forEach(name => { if (!names.includes(name)) removeCustomBoardUI(name); });
+        names.forEach(name => { if (!window.boardSet[name]) addBoardUI(name, { custom: true }); });
+        Object.keys(window.customBoards).forEach(name => { if (!names.includes(name)) removeBoardUI(name); });
     }
     window.reconcileCustomBoards = reconcileCustomBoards;
 
@@ -1462,19 +1745,32 @@
         const name = raw.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '');
         if (!name) { alert('영문/숫자로 이름을 입력해주세요.'); return; }
 
-        const reserved = ['BUBBLE', 'NIN', 'NEG', 'DIARY', 'BOARDS'];
+        const reserved = ['DIARY', 'BOARDS', 'SETTINGS'];
         if (reserved.includes(name) || name.startsWith('_')) {
             alert('이미 사용 중이거나 예약된 이름이에요. 다른 이름을 입력해주세요.');
             return;
         }
-        if (getBoardTypes().includes(name)) {
-            alert('이미 존재하는 게시판이에요.');
+
+        // 이미 있는 이름(글이 0개라 숨겨져 있던 게시판 포함)이면 새로 만들지 않고 그냥 열어준다.
+        if (window.boardSet[name]) {
+            window.tempVisible.add(name);
+            switchTab(name);
+            window.scrollTo(0, 0);
             return;
         }
 
+        // 글이 0개인 게시판은 원래 숨겨지지만, 방금 만든 게시판은 글을 쓸 수 있도록
+        // 다른 탭으로 나가기 전까지만 보여준다.
+        window.tempVisible.add(name);
+        window.pendingOpenBoard = name;
         window.fbActions.addDoc(window.fbActions.collection(window.db, '_boards'), { name, createdAt: Date.now() })
-            .catch(e => { console.error('[nalleum] 게시판 생성 실패', e); alert('게시판 생성에 실패했어요.'); });
-        // addCustomBoardUI() runs automatically once the _boards listener
+            .catch(e => {
+                console.error('[nalleum] 게시판 생성 실패', e);
+                window.tempVisible.delete(name);
+                window.pendingOpenBoard = null;
+                alert('게시판 생성에 실패했어요.');
+            });
+        // addBoardUI() runs automatically once the _boards listener
         // echoes this write back (same instant local-echo behavior as
         // every other write in this app).
     }
@@ -1483,6 +1779,7 @@
     // ── Delete board (right-click on a tab) ──
     // DIARY is intentionally excluded everywhere (never has this handler
     // attached) — it's the one board that's always meant to stick around.
+    // 글을 전부 지우면 게시판은 0개가 되어 저절로 숨겨진다("_boards"로 만든 건 메타 문서도 함께 삭제).
     async function deleteBoard(type) {
         if (type === 'DIARY') return;
 
@@ -1505,12 +1802,12 @@
             }
             // Don't wait for the _boards listener round trip — remove the
             // UI immediately, it'll just no-op when the echo arrives.
-            removeCustomBoardUI(type);
+            removeBoardUI(type);
         } else {
             window.imgFilter[type] = false;
             window.hashtagFilter[type] = null;
             if (window.selectMode[type]) cancelSelectMode();
-            window.renderBoard(type);
+            window.renderBoard(type);   // 삭제가 서버/로컬 반영되면 snapshot → refreshTabs()가 탭을 숨긴다
         }
     }
     window.deleteBoard = deleteBoard;
@@ -1545,6 +1842,7 @@
         const countEl      = document.getElementById(type.toLowerCase() + '-search-count');
         const tagBadgeEl  = document.getElementById(type.toLowerCase() + '-hashtag-badge');
         const pg          = document.getElementById(type.toLowerCase() + '-pagination');
+        if (!container) return;   // 삭제된 게시판의 늦은 snapshot 등
 
         // Everything lives locally now, so search/filter/paging are all
         // just different views over the same in-memory array — no fetches.
@@ -1581,7 +1879,7 @@
         renderTagCloud(type);
 
         if (posts.length === 0 && filtered) {
-            container.innerHTML = `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">
+            container.innerHTML = `<div style="color:#2b2b2b; text-align:center; padding:20px; font-size:10px;">
                 ${activeTag ? 'NO POSTS WITH THIS TAG.' : (onlyImages && !kw ? 'NO IMAGE POSTS.' : 'NO RESULTS.')}
             </div>`;
             return;
@@ -1598,24 +1896,42 @@
         }
 
         const selecting = window.selectMode[type];
+        const P = window.profile || DEFAULT_PROFILE;
 
         container.innerHTML = posts.map(p => {
             const isSelected = selecting && window.selectedPosts[type].has(p.id);
+            const isAi   = p.author === 'ai';
+            const who    = isAi ? 'ai' : 'me';
+            const name   = isAi ? P.aiName   : P.meName;
+            const handle = isAi ? P.aiHandle : P.meHandle;
+            const photo  = isAi ? P.aiAvatar : P.meAvatar;
+            // 트친(AI)이 쓴 글은 외부에서 온 텍스트이므로 HTML을 이스케이프한다
+            const bodyHtml = isAi ? linkify(escapeHtml(p.content || ''), type) : linkify(p.content, type);
             return `
-            <div class="post-item${isSelected ? ' selected' : ''}" data-id="${p.id}" data-type="${type}">
+            <div class="post-item${isAi ? ' ai' : ''}${isSelected ? ' selected' : ''}" data-id="${p.id}" data-type="${type}">
                 <div class="post-actions">
                     ${selecting ? `<input type="checkbox" class="post-select-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); togglePostSelect('${type}', '${p.id}', this)">` : ''}
                     <span onclick="startEditPost('${type}', '${p.id}')">EDIT</span>
                     <span onclick="movePostFromEl(this)">MOVE</span>
                     <span onclick="deletePostFromEl(this)">DEL</span>
                 </div>
-                <div style="font-family:sans-serif; font-size:14px; padding-right:10px;">${highlight(linkify(p.content, type), kw)} <span style="color:#306230; font-size:9px;">${p.date}</span></div>
-                <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"
-                     data-images='${(p.images||[]).map(u=>u.replace(/'/g,"&#39;")).join(",")}'>
-                    ${(p.images || []).map(img =>
-                        `<img src="${img}" onclick="openModalFromThumb(this)"
-                              style="width:70px; height:70px; object-fit:cover; border:1px solid #0f380f; cursor:zoom-in; filter: grayscale(1) sepia(1) hue-rotate(30deg) brightness(0.7) contrast(1.2);">`
-                    ).join('')}
+                <div class="tweet-row">
+                    <div class="avatar avatar-${who}${photo ? ' photo' : ''}"></div>
+                    <div class="tweet-main">
+                        <div class="tweet-head">
+                            <span class="tweet-name">${escapeHtml(name)}</span>
+                            <span class="tweet-handle">${escapeHtml(handle)}</span>
+                            <span class="tweet-date">${p.date}</span>
+                        </div>
+                        <div class="tweet-body">${highlight(bodyHtml, kw)}</div>
+                        <div style="display:flex; gap:5px; margin-top:10px; flex-wrap:wrap;"
+                             data-images='${(p.images||[]).map(u=>u.replace(/'/g,"&#39;")).join(",")}'>
+                            ${(p.images || []).map(img =>
+                                `<img src="${img}" onclick="openModalFromThumb(this)"
+                                      style="width:70px; height:70px; object-fit:cover; border:1px solid #2b2b2b; cursor:zoom-in; filter: grayscale(1) contrast(1.1) brightness(1.05);">`
+                            ).join('')}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1712,7 +2028,7 @@ function renderTagCloud(type) {
         }
 
         if (posts.length === 0) {
-            container.innerHTML = `<div style="color:#0f380f; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
+            container.innerHTML = `<div style="color:#2b2b2b; text-align:center; padding:20px; font-size:10px;">${kw ? 'NO RESULTS.' : 'NO ADVENTURES YET.'}</div>`;
             return;
         }
 
@@ -1726,10 +2042,6 @@ function renderTagCloud(type) {
                     <div class="diary-card-info">
                         <div class="diary-card-title">${highlight(p.title, kw)}</div>
                         <div class="diary-card-date">${p.date}</div>
-                    </div>
-                    <div class="gb-buttons">
-                        <div class="gb-btn">B</div>
-                        <div class="gb-btn">A</div>
                     </div>
                 </div>
             `;
@@ -1833,9 +2145,7 @@ function renderTagCloud(type) {
     }
 
     // init drag-and-drop on all editor boxes
-    setupDragDrop('bubble-editor-box', 'bubble-previews');
-    setupDragDrop('nin-editor-box',    'nin-previews');
-    setupDragDrop('neg-editor-box',    'neg-previews');
+    // (일반 게시판은 addBoardUI()가 만들면서 직접 연결한다)
     setupDragDrop('diary-editor-box',  'diary-previews');
 
     function updatePreview(containerId) {
@@ -1876,7 +2186,7 @@ function renderTagCloud(type) {
                 imageUrls.push(await getDownloadURL(storageRef));
             }
 
-            if (type === 'BUBBLE' || type === 'NIN' || type === 'NEG') {
+            if (type !== 'DIARY') {
                 const inputEl = document.getElementById(type.toLowerCase() + '-text');
                 const content = inputEl.value;
 
@@ -1885,7 +2195,10 @@ function renderTagCloud(type) {
                     window.queueUpdate(type, editPostId, { content, images: merged });
                     editPostId = null;
                 } else {
-                    window.queueCreate(type, { content, images: imageUrls, date, createdAt: Date.now() });
+                    // 서버에 저장되고 나면 트친(AI)이 반응할지 판단한다 (화면은 기다리지 않음)
+                    const createdAt = Date.now();
+                    window.queueCreate(type, { content, images: imageUrls, date, createdAt })
+                        .then(() => { if (window.maybeTriggerAI) window.maybeTriggerAI({ type, createdAt }); });
                     window.currentPage[type] = 1;
                 }
                 inputEl.value = '';
@@ -2051,7 +2364,8 @@ function renderTagCloud(type) {
                 content:   post.content,
                 images:    post.images || [],
                 date:      post.date,
-                createdAt: post.createdAt || Date.now()
+                createdAt: post.createdAt || Date.now(),
+                ...(post.author ? { author: post.author } : {})
             });
             window.queueDelete(fromType, id, []); // images move with the copy, don't delete from storage
             moved++;
@@ -2072,7 +2386,8 @@ function renderTagCloud(type) {
             content:   post.content,
             images:    post.images || [],
             date:      post.date,
-            createdAt: post.createdAt || Date.now()
+            createdAt: post.createdAt || Date.now(),
+            ...(post.author ? { author: post.author } : {})
         });
         window.queueDelete(fromType, id, []); // images move with the copy, don't delete from storage
 
@@ -2245,12 +2560,7 @@ function renderTagCloud(type) {
             const zip       = new JSZip();
             const imgFolder = zip.folder("images");
 
-            const BOARD_LIST = [
-                ['BUBBLE', 'BUBBLE'],
-                ['NIN',    'NIN'],
-                ['NEG',    'NEG'],
-                ['DIARY',  'DIARY']
-            ];
+            const BOARD_LIST = getBoardTypes().map(t => [t, t]);   // 게시판이 동적이므로 지금 있는 것 전부
 
             // 1) 이미지 다운로드 작업 목록만 먼저 모은다 (아직 fetch는 안 함)
             const imageJobs = [];
@@ -2314,6 +2624,7 @@ function renderTagCloud(type) {
                         });
                     }
 
+                    if (data.author === 'ai') md += "<!-- author:ai -->\n";   // 트친(AI)이 쓴 글 표시
                     md += "\n---\n\n";
                 }
             }
@@ -2338,19 +2649,514 @@ function renderTagCloud(type) {
         }
     }
 
-    // ── Ctrl+Enter to send ──
-    ['bubble-text', 'nin-text', 'neg-text', 'diaryContentInput'].forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                if (id === 'bubble-text')        savePost('BUBBLE');
-                else if (id === 'nin-text')      savePost('NIN');
-                else if (id === 'neg-text')      savePost('NEG');
-                else if (id === 'diaryContentInput') savePost('DIARY');
-            }
-        });
+    // ── Ctrl+Enter to send (모든 게시판 공통) ──
+    document.addEventListener('keydown', e => {
+        if (!((e.ctrlKey || e.metaKey) && e.key === 'Enter')) return;
+        const el = e.target;
+        if (!el || !el.id) return;
+        if (el.id === 'diaryContentInput') { savePost('DIARY'); return; }
+        if (el.classList && el.classList.contains('post-input') && el.id.endsWith('-text')) {
+            savePost(el.id.slice(0, -5).toUpperCase());
+        }
     });
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── TWT: 프로필(사진) + 설정 + AI 트친 ──
+    // ═══════════════════════════════════════════════════════════════
+    const $id = id => document.getElementById(id);
+
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    let toastTimer = null;
+    function showToast(msg, ms = 2800) {
+        const el = $id('toast');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+    }
+    window.showToast = showToast;
+
+    function formatPostDate(d) {
+        const p2 = n => String(n).padStart(2, '0');
+        return `[${d.getFullYear()}.${p2(d.getMonth() + 1)}.${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}]`;
+    }
+
+    // ── Profile (_settings/profile) ──
+    const DEFAULT_AI_PROMPT =
+`너는 '나'의 오랜 트위터 트친(맞팔 팔로워)이야.
+- 말투: 편한 반말. 이모지나 ㅋㅋ는 가끔만 써.
+- 내가 타임라인에 올린 글을 보고 공감하거나, 가볍게 드립을 치거나, 안부를 묻는 식으로 반응해.
+- 진짜 사람 트친처럼 굴어. 자기가 AI라는 얘기나 설명·조언 투의 말은 하지 마.
+- 해시태그는 쓰지 마.`;
+
+    const DEFAULT_PROFILE = {
+        meName: 'ME',   meHandle: '@me',   meAvatar: '',
+        aiName: '트친', aiHandle: '@twt',  aiAvatar: '',
+        aiPrompt: DEFAULT_AI_PROMPT,
+        aiChance: 40,        // 새 글이 1~2개 쌓였을 때 반응할 확률(%). 3개 이상이면 무조건 반응.
+        aiEnabled: true
+    };
+    const TEXT_KEYS = ['meName', 'meHandle', 'aiName', 'aiHandle', 'aiPrompt'];
+    const IMG_RE = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+
+    let rawProfile = {};                       // Firestore 문서 그대로
+    window.profile = { ...DEFAULT_PROFILE };   // 화면에서 쓰는(기본값이 채워진) 값
+    let lastProfileSig = null;
+
+    function mergeProfile(raw) {
+        const out = { ...DEFAULT_PROFILE };
+        TEXT_KEYS.forEach(k => {
+            if (typeof raw[k] === 'string' && raw[k].trim()) out[k] = raw[k];   // 비워두면 기본값
+        });
+        ['meAvatar', 'aiAvatar'].forEach(k => {
+            if (typeof raw[k] === 'string' && IMG_RE.test(raw[k])) out[k] = raw[k];
+        });
+        if (typeof raw.aiChance === 'number' && isFinite(raw.aiChance)) out.aiChance = Math.min(100, Math.max(0, raw.aiChance));
+        if (typeof raw.aiEnabled === 'boolean') out.aiEnabled = raw.aiEnabled;
+        return out;
+    }
+
+    function applyProfile() {
+        const p = window.profile;
+        const root = document.documentElement.style;
+        root.setProperty('--avatar-me', p.meAvatar ? `url("${p.meAvatar}")` : 'none');
+        root.setProperty('--avatar-ai', p.aiAvatar ? `url("${p.aiAvatar}")` : 'none');
+
+        // 카드에 보이는 값(이름/핸들/사진)이 바뀐 경우에만 게시판을 다시 그린다
+        const sig = [p.meName, p.meHandle, p.meAvatar, p.aiName, p.aiHandle, p.aiAvatar].join('\u0001');
+        if (sig !== lastProfileSig) {
+            lastProfileSig = sig;
+            window.boardOrder.forEach(t => renderBoard(t));
+        }
+        syncSettingsAvatars();
+        renderAiStatus();
+    }
+
+    function onProfileData(data) {
+        rawProfile = data || {};
+        window.profile = mergeProfile(rawProfile);
+        applyProfile();
+    }
+    window.onProfileData = onProfileData;
+
+    function saveProfileDoc(partial) {
+        rawProfile = { ...rawProfile, ...partial };
+        window.profile = mergeProfile(rawProfile);
+        applyProfile();                                          // 화면은 바로 반영
+        if (window.saveSettingsDoc) window.saveSettingsDoc('profile', partial);
+    }
+
+    // 프로필 사진: 가운데를 정사각형으로 잘라 96×96 WebP(안 되면 JPEG)로 줄인다. 보통 3~8KB.
+    // 문서 안에 data URL로 넣기 때문에 Storage 업로드/다운로드가 없고, 문서 읽기도 늘지 않는다.
+    function fileToAvatarDataUrl(file, size = 96) {
+        return new Promise((resolve, reject) => {
+            if (!file || !file.type.startsWith('image/')) return reject(new Error('not an image'));
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const side = Math.min(img.naturalWidth, img.naturalHeight);
+                const sx = (img.naturalWidth  - side) / 2;
+                const sy = (img.naturalHeight - side) / 2;
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';                 // 투명 PNG가 JPEG 폴백에서 까맣게 되지 않도록
+                ctx.fillRect(0, 0, size, size);
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+                let out = '';
+                for (const q of [0.82, 0.7, 0.55]) {
+                    out = canvas.toDataURL('image/webp', q);
+                    if (!out.startsWith('data:image/webp')) out = canvas.toDataURL('image/jpeg', q);   // WebP 인코딩 미지원 브라우저
+                    if (out.length < 24000) break;
+                }
+                resolve(out);
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+            img.src = url;
+        });
+    }
+
+    function pickAvatar(who) { $id('set-' + who + '-file').click(); }
+
+    async function onAvatarPicked(who, input) {
+        const file = input.files && input.files[0];
+        input.value = '';
+        if (!file) return;
+        try {
+            const dataUrl = await fileToAvatarDataUrl(file);
+            saveProfileDoc({ [who + 'Avatar']: dataUrl });
+            showToast('프로필 사진을 바꿨어요');
+        } catch (e) {
+            console.error(e);
+            alert('이미지를 불러오지 못했어요.');
+        }
+    }
+
+    function removeAvatar(who) {
+        if (!window.profile[who + 'Avatar']) return;
+        if (!confirm('프로필 사진을 삭제할까요? (기본 아이콘으로 돌아가요)')) return;
+        saveProfileDoc({ [who + 'Avatar']: '' });
+        showToast('프로필 사진을 삭제했어요');
+    }
+
+    // ── Settings panel ──
+    function syncSettingsAvatars() {
+        const p = window.profile;
+        const me = $id('set-me-avatar'), ai = $id('set-ai-avatar');
+        if (me) me.classList.toggle('photo', !!p.meAvatar);
+        if (ai) ai.classList.toggle('photo', !!p.aiAvatar);
+    }
+
+    function fillSettingsForm() {
+        const p = window.profile;
+        $id('set-me-name').value     = p.meName;
+        $id('set-me-handle').value   = p.meHandle;
+        $id('set-ai-name').value     = p.aiName;
+        $id('set-ai-handle').value   = p.aiHandle;
+        $id('set-ai-prompt').value   = p.aiPrompt;
+        $id('set-ai-chance').value   = p.aiChance;
+        $id('set-ai-enabled').checked = !!p.aiEnabled;
+        syncSettingsAvatars();
+        renderAiStatus();
+    }
+
+    function normHandle(v) {
+        v = (v || '').trim().replace(/\s+/g, '');
+        if (!v) return '';
+        return v.startsWith('@') ? v : '@' + v;
+    }
+
+    function saveSettings() {
+        let chance = parseInt($id('set-ai-chance').value, 10);
+        if (isNaN(chance)) chance = DEFAULT_PROFILE.aiChance;
+        chance = Math.min(100, Math.max(0, chance));
+        saveProfileDoc({
+            meName:    $id('set-me-name').value.trim(),
+            meHandle:  normHandle($id('set-me-handle').value),
+            aiName:    $id('set-ai-name').value.trim(),
+            aiHandle:  normHandle($id('set-ai-handle').value),
+            aiPrompt:  $id('set-ai-prompt').value.trim(),
+            aiChance:  chance,
+            aiEnabled: $id('set-ai-enabled').checked
+        });
+        fillSettingsForm();          // 빈 칸이 기본값으로 채워진 모습을 바로 보여준다
+        showToast('SAVED');
+    }
+
+    function resetAiPrompt() {
+        if (!confirm('프롬프트를 기본값으로 되돌릴까요? (SAVE를 눌러야 저장돼요)')) return;
+        $id('set-ai-prompt').value = DEFAULT_AI_PROMPT;
+    }
+
+    function openSettings() {
+        if (window.activeTab === SETTINGS_TAB) return;
+        window.tabBeforeSettings = window.activeTab;
+        fillSettingsForm();
+        switchTab(SETTINGS_TAB);
+        window.scrollTo(0, 0);
+    }
+
+    function closeSettings() {
+        const back = window.tabBeforeSettings;
+        if (back && (back === 'DIARY' || getVisibleBoards().includes(back))) {
+            switchTab(back);
+        } else {
+            window.activeTab = null;
+            refreshTabs();
+        }
+    }
+
+    function reactNow() {
+        maybeTriggerAI({ force: true });
+    }
+
+    // ── AI 상태 (_settings/ai_state): 마지막 반응 시각 + 오늘 호출 횟수 ──
+    window.aiState   = null;     // null = 아직 못 읽음
+    window.aiRuntime = { busy: false, cooldownUntil: 0, lastMsg: '' };
+
+    function onAiStateData(data) {
+        window.aiState = { ...(data || {}) };
+        renderAiStatus();
+    }
+    window.onAiStateData = onAiStateData;
+
+    function updateAiState(partial) {
+        window.aiState = { ...(window.aiState || {}), ...partial };
+        if (window.saveSettingsDoc) window.saveSettingsDoc('ai_state', partial);
+    }
+
+    // Gemini 무료 티어의 하루 한도는 태평양 시간 자정에 초기화되므로 같은 기준으로 날짜를 센다
+    function pacificDayKey() {
+        return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+    }
+    function aiUsageToday() {
+        const u = (window.aiState && window.aiState.aiUsage) || {};
+        return u.day === pacificDayKey() ? (u.count || 0) : 0;
+    }
+
+    function setAiStatus(msg) {
+        window.aiRuntime.lastMsg = msg;
+        renderAiStatus();
+    }
+
+    function renderAiStatus() {
+        const el = $id('ai-status');
+        if (!el) return;
+        const p = window.profile;
+        const lines = [
+            `API KEY: ${GEMINI_API_KEY ? '✅ SET' : '❌ NOT SET — index.html 위쪽의 GEMINI_API_KEY에 키를 넣어주세요'}`,
+            `MODEL: ${escapeHtml(GEMINI_MODEL)}`,
+            `TODAY: ${aiUsageToday()} / ${AI_DAILY_LIMIT}`,
+            `TWT: ${p.aiEnabled ? 'ON' : 'OFF'} · CHANCE ${p.aiChance}%`
+        ];
+        if (window.aiRuntime.lastMsg) lines.push(`LAST: ${escapeHtml(window.aiRuntime.lastMsg)}`);
+        el.innerHTML = lines.join('<br>');
+    }
+
+    function waitFor(cond, timeoutMs) {
+        return new Promise(resolve => {
+            const t0 = Date.now();
+            (function poll() {
+                if (cond()) return resolve(true);
+                if (Date.now() - t0 > timeoutMs) return resolve(false);
+                setTimeout(poll, 60);
+            })();
+        });
+    }
+
+    // ── 트친 트리거 ──
+    // 내 새 글(마지막 반응 이후 쌓인 글)이 1~2개면 확률로, 3개 이상이면 무조건 반응한다.
+    // 카운터를 따로 저장하지 않고, 이미 메모리에 있는 게시글에서 "마지막 반응 시각 이후의 내 글"을
+    // 세기 때문에 글을 쓸 때마다 Firestore에 쓰기/읽기가 추가로 생기지 않는다.
+    // (쓰기는 트친이 실제로 반응했을 때만 ai_state 문서에 1번)
+    function collectMyPosts() {
+        const out = [];
+        window.boardOrder.forEach(t => {
+            (window.boardData[t] || []).forEach(p => {
+                if (p.author !== 'ai' && typeof p.createdAt === 'number') out.push({ ...p, board: t });
+            });
+        });
+        return out.sort((a, b) => a.createdAt - b.createdAt);
+    }
+
+    function recentAiTweets(n) {
+        const out = [];
+        window.boardOrder.forEach(t => {
+            (window.boardData[t] || []).forEach(p => {
+                if (p.author === 'ai' && typeof p.createdAt === 'number') out.push(p);
+            });
+        });
+        return out.sort((a, b) => b.createdAt - a.createdAt).slice(0, n).reverse().map(p => (p.content || '').trim());
+    }
+
+    async function maybeTriggerAI(opts = {}) {
+        const force = !!opts.force;
+        const rt = window.aiRuntime;
+        const P  = window.profile;
+
+        if (rt.busy) { if (force) showToast('트친이 지금 글을 쓰는 중이에요'); return; }
+        if (!force && !P.aiEnabled) return;
+        if (!GEMINI_API_KEY) {
+            setAiStatus('API 키가 비어 있어요');
+            if (force) showToast('GEMINI_API_KEY가 비어 있어요 (index.html 위쪽)');
+            return;
+        }
+        if (Date.now() < rt.cooldownUntil) {
+            if (force) showToast('잠시 후 다시 시도해주세요 (요청 한도 대기 중)');
+            return;
+        }
+
+        rt.busy = true;
+        try {
+            await waitFor(() => window.aiState !== null, 4000);
+            if (window.aiState === null) window.aiState = {};
+
+            // 방금 저장한 글이 로컬 데이터(boardData)에 반영될 때까지 잠깐 기다린다
+            if (opts.type && opts.createdAt) {
+                await waitFor(() => (window.boardData[opts.type] || []).some(p => p.createdAt === opts.createdAt), 3000);
+            }
+
+            const mine = collectMyPosts();
+            if (mine.length === 0) { if (force) showToast('아직 반응할 글이 없어요'); return; }
+
+            // 처음 쓰는 경우: 예전에 쌓여있던 글 전부에 반응하지 않도록 "지금 쓴 글"부터 기준점을 잡는다
+            if (window.aiState.lastReactedAt == null) {
+                updateAiState({ lastReactedAt: mine[mine.length - 1].createdAt - 1 });
+            }
+            const since = window.aiState.lastReactedAt;
+
+            let pending = mine.filter(p => p.createdAt > since);
+            if (force) {
+                if (pending.length === 0) pending = mine.slice(-3);
+            } else {
+                if (pending.length === 0) return;
+                const chance = Math.min(100, Math.max(0, Number(P.aiChance) || 0)) / 100;
+                if (pending.length < 3 && Math.random() >= chance) return;   // 이번엔 조용히 — 글은 계속 쌓인다
+            }
+
+            if (aiUsageToday() >= AI_DAILY_LIMIT) {
+                setAiStatus(`오늘 한도(${AI_DAILY_LIMIT})를 다 썼어요`);
+                if (force) showToast('오늘 호출 한도를 다 썼어요');
+                return;
+            }
+
+            // 토큰 절약: 가장 최근 5개까지만 보여준다
+            const recent = pending.slice(-5);
+            const boards = [...new Set(recent.map(p => p.board))];
+            const timeline = boards.map(b => {
+                const items = recent.filter(p => p.board === b).map((p, i) => {
+                    const body = (p.content || '').trim().slice(0, 500);
+                    const img  = (p.images || []).length ? ` (사진 ${p.images.length}장 첨부)` : '';
+                    return `${i + 1}. ${body || '(글 없이 사진만 올림)'}${img}`;
+                }).join('\n');
+                return `[게시판: ${b}]\n${items}`;
+            }).join('\n\n');
+
+            const past = recentAiTweets(3);
+            const userText =
+                `내가 방금 타임라인에 올린 글이야.\n\n${timeline}` +
+                (past.length ? `\n\n[네가 최근에 쓴 트윗 — 말투 일관성 참고용. 같은 표현은 반복하지 마]\n${past.map(t => '- ' + t).join('\n')}` : '') +
+                `\n\n위 게시판(${boards.join(', ')})마다 트윗을 정확히 1개씩 써줘.`;
+
+            const systemText =
+                `${P.aiPrompt}\n\n` +
+                `[출력 규칙 — 반드시 지킬 것]\n` +
+                `- 트윗 한 개 분량(1~2문장, 120자 이내)으로 쓴다. 길어지거나 설명조가 되면 안 된다.\n` +
+                `- 내가 올린 글의 구체적인 내용을 짚어서 반응한다. 뭉뚱그린 인사말은 금지.\n` +
+                `- 게시판마다 트윗을 정확히 1개씩만 쓴다. board 값은 주어진 게시판 이름을 그대로 쓴다.\n` +
+                `- 반드시 {"tweets":[{"board":"...","text":"..."}]} 형태의 JSON으로만 답한다.`;
+
+            const tweets = await requestTweets(systemText, userText, boards);
+            if (!tweets.length) throw new Error('응답에서 트윗을 찾지 못했어요');
+
+            const now = Date.now();
+            let posted = 0;
+            tweets.forEach((t, i) => {
+                if (!window.boardSet[t.board]) return;    // 그 사이 삭제된 게시판
+                window.queueCreate(t.board, {
+                    content: t.text, images: [], date: formatPostDate(new Date(now)),
+                    createdAt: now + i, author: 'ai'
+                });
+                posted++;
+            });
+
+            // 이번에 훑어본 글까지만 "반응 완료"로 표시 (그 사이 새로 쓴 글은 계속 대기)
+            const newest = Math.max(...pending.map(p => p.createdAt));
+            updateAiState({
+                lastReactedAt: Math.max(since, newest),
+                aiUsage: { day: pacificDayKey(), count: aiUsageToday() + 1 }
+            });
+            setAiStatus(`OK — 트윗 ${posted}개 (${new Date().toLocaleTimeString()})`);
+            showToast('🐦 트친이 트윗했어요');
+        } catch (e) {
+            console.error('[nalleum] TWT 반응 실패', e);
+            const status = e && e.status;
+            if (status === 429) rt.cooldownUntil = Date.now() + 60 * 1000;
+            const hint = status === 429 ? ' (요청 한도 — 잠시 후 다시)'
+                       : (status === 400 || status === 403) ? ' (API 키/모델명을 확인해주세요)' : '';
+            setAiStatus(`ERROR — ${(e && e.message) || e}${hint}`);
+            showToast('트친 반응 실패: ' + ((e && e.message) || e).toString().slice(0, 80));
+        } finally {
+            rt.busy = false;
+            renderAiStatus();
+        }
+    }
+    window.maybeTriggerAI = maybeTriggerAI;
+
+    async function requestTweets(systemText, userText, boards) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemText }] },
+                contents: [{ role: 'user', parts: [{ text: userText }] }],
+                generationConfig: {
+                    maxOutputTokens: 2048,
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                        type: 'OBJECT',
+                        properties: {
+                            tweets: {
+                                type: 'ARRAY',
+                                items: {
+                                    type: 'OBJECT',
+                                    properties: { board: { type: 'STRING' }, text: { type: 'STRING' } },
+                                    required: ['board', 'text']
+                                }
+                            }
+                        },
+                        required: ['tweets']
+                    }
+                }
+            })
+        });
+
+        if (!res.ok) {
+            let detail = '';
+            try { const j = await res.json(); detail = (j.error && j.error.message) || ''; } catch (_) {}
+            const err = new Error(`HTTP ${res.status}${detail ? ' ' + detail.slice(0, 120) : ''}`);
+            err.status = res.status;
+            throw err;
+        }
+
+        const data = await res.json();
+        const cand = data.candidates && data.candidates[0];
+        const parts = (cand && cand.content && cand.content.parts) || [];
+        const text = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+        if (!text.trim()) {
+            const why = (cand && cand.finishReason) || (data.promptFeedback && data.promptFeedback.blockReason) || 'unknown';
+            throw new Error(`빈 응답 (${why})`);
+        }
+        return parseTweets(text, boards);
+    }
+
+    function parseTweets(raw, boards) {
+        const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+        let obj = null;
+        try { obj = JSON.parse(cleaned); } catch (_) {}
+
+        let list = [];
+        if (obj && Array.isArray(obj.tweets)) list = obj.tweets;
+        else if (Array.isArray(obj)) list = obj;
+
+        const byUpper = {};
+        boards.forEach(b => { byUpper[b.toUpperCase()] = b; });
+
+        const seen = new Set();
+        const out = [];
+        list.forEach(t => {
+            if (!t) return;
+            const board = byUpper[String(t.board || '').trim().toUpperCase()];
+            const text  = String(t.text || '').trim().slice(0, 280);
+            if (!board || !text || seen.has(board)) return;
+            seen.add(board);
+            out.push({ board, text });
+        });
+
+        // JSON이 아니라 평문으로 온 경우: 게시판이 하나뿐일 때만 통째로 하나의 트윗으로 사용
+        if (!out.length && !obj && boards.length === 1) {
+            const text = raw.trim().slice(0, 280);
+            if (text) out.push({ board: boards[0], text });
+        }
+        return out;
+    }
+
+    // 다른 스크립트/인라인 핸들러에서 쓰는 함수들 노출
+    window.escapeHtml = escapeHtml;
+
+    // ── Boot: 예전 게시판들을 등록하고(탭은 글이 있을 때만 보임) 첫 탭을 고른다 ──
+    LEGACY_BOARDS.forEach(t => addBoardUI(t));
+    refreshTabs();
+    setTimeout(refreshTabs, 2600);   // 네트워크가 느려도 로딩 화면에 영원히 머무르지 않게
 </script>
 </body>
 </html>
