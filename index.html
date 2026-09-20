@@ -53,7 +53,7 @@
 
         #app {
             width: 100%;
-            width: 480px;
+            max-width: 480px;
             min-height: 100vh;
             padding: 0 0 20px;
             position: relative;
@@ -930,6 +930,145 @@
         }
         .move-popup-option:hover { background: var(--navy-a); color: #eee; }
         .move-popup-option + .move-popup-option { border-top: 1px solid var(--line-lo); }
+
+        /* ── YouTube 플레이어 버튼(탭 줄) + 플레이리스트 다이얼로그 ── */
+        .tab-sep {
+            width: 1px;
+            align-self: stretch;
+            margin: 2px 3px;
+            background: var(--line-lo);
+            box-shadow: 1px 0 0 var(--line-hi);
+        }
+        .tab-btn.icon-btn { min-width: 32px; padding: 5px 8px; }
+
+        /* 오디오 재생용 숨김 플레이어 */
+        #ytPlayerHolder {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mac-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(20, 20, 30, 0.55);
+        }
+        .mac-overlay.open { display: flex; }
+
+        .mac-dialog {
+            width: 100%;
+            max-width: 380px;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--win-bg);
+            border: 2px solid var(--win-border);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.4), inset 1px 1px 0 var(--line-hi);
+        }
+        .mac-titlebar {
+            position: relative;
+            flex: 0 0 auto;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: repeating-linear-gradient(180deg, var(--line-hi) 0px, #bcbcbc 4px);
+            border-bottom: 2px solid var(--win-border);
+        }
+        .mac-titlebar .close-box {
+            position: absolute;
+            left: 8px;
+            top: 6px;
+            width: 15px;
+            height: 15px;
+            padding: 0;
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
+            cursor: pointer;
+        }
+        .mac-titlebar .close-box:active {
+            box-shadow: inset -1px -1px 0 var(--line-hi), inset 1px 1px 0 var(--line-lo);
+        }
+        .mac-titlebar .title {
+            background: var(--win-bg);
+            padding: 0 12px;
+            font-family: var(--mac-title-font);
+            font-style: italic;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            color: var(--text);
+        }
+        .mac-dialog-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 12px;
+            min-height: 0;
+        }
+
+        .playlist-form { display: flex; gap: 6px; }
+        .playlist-form .settings-input { flex: 1; min-width: 0; }
+        .playlist-hint { min-height: 14px; font-size: 11px; color: var(--text-soft); }
+
+        .playlist-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 240px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 #999;
+        }
+        .playlist-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px 8px;
+            border-bottom: 1px solid #dcdcdc;
+        }
+        .playlist-item.playing { background: var(--navy-a); color: #eee; }
+        .playlist-title {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+        .playlist-del {
+            flex: 0 0 auto;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            font-family: var(--mac-font);
+            font-size: 10px;
+            color: var(--text);
+            background: var(--btn-face);
+            border: 1px solid var(--win-border);
+            box-shadow: inset 1px 1px 0 var(--line-hi), inset -1px -1px 0 var(--line-lo);
+            cursor: pointer;
+        }
+        .playlist-del:active {
+            box-shadow: inset -1px -1px 0 var(--line-hi), inset 1px 1px 0 var(--line-lo);
+        }
+        .playlist-empty {
+            text-align: center;
+            padding: 16px 4px;
+            font-size: 11px;
+            color: var(--text-soft);
+        }
     </style>
 </head>
 <body>
@@ -956,6 +1095,9 @@
         <div class="nav-tabs" id="nav-tabs-row">
             <button id="tabDiary"  class="tab-btn"        onclick="switchTab('DIARY')">DIARY</button>
             <button id="tabAddBoard" class="tab-btn" onclick="createNewBoard()" title="새 게시판 만들기">+</button>
+            <span class="tab-sep"></span>
+            <button id="ytToggleBtn"     class="tab-btn icon-btn" type="button" title="랜덤 재생">▶</button>
+            <button id="openPlaylistBtn" class="tab-btn icon-btn" type="button" title="플레이리스트">♪</button>
         </div>
     </header>
 
@@ -1071,6 +1213,29 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- 유튜브 플레이어 (숨김, 오디오 재생용) -->
+<div id="ytPlayerHolder"><div id="ytPlayer"></div></div>
+
+<!-- 플레이리스트 다이얼로그 -->
+<div class="mac-overlay" id="playlistOverlay">
+    <div class="mac-dialog" role="dialog" aria-modal="true" aria-labelledby="playlistTitle">
+        <div class="mac-titlebar">
+            <button type="button" class="close-box" id="playlistClose" aria-label="닫기"></button>
+            <div class="title" id="playlistTitle">PLAYLIST</div>
+        </div>
+        <div class="mac-dialog-body">
+            <div class="playlist-form">
+                <input type="url" id="youtubeUrlInput" class="settings-input" placeholder="유튜브 링크를 붙여넣으세요" autocomplete="off">
+                <button type="button" class="btn-pixel btn-small" id="playlistAddBtn">ADD</button>
+            </div>
+            <div class="playlist-hint" id="playlistHint"></div>
+            <ul class="playlist-list" id="playlistList">
+                <li class="playlist-empty" id="playlistEmpty">등록된 곡이 없어요.</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
 <button id="topBtn" onclick="scrollToTop()" aria-label="맨 위로">TOP</button>
 
@@ -1314,6 +1479,11 @@
             console.error('[nalleum] ai_state listener error', err);
             if (window.onAiStateData) window.onAiStateData({});   // 실패해도 트리거가 영원히 기다리지 않게
         });
+
+        // 플레이리스트: 곡마다 문서를 만들지 않고 문서 1개(items 배열)에 담는다 → 곡이 몇 개든 읽기는 1회
+        onSnapshot(doc(window.db, '_settings', 'playlist'), snap => {
+            if (window.onPlaylistData) window.onPlaylistData(snap.exists() ? snap.data() : {});
+        }, err => console.error('[nalleum] playlist listener error', err));
     }
 
     // ── Custom boards — a small "_boards" collection is the source of truth
@@ -2230,10 +2400,11 @@ function renderTagCloud(type) {
     }
 
     // ── Delete post ──
-    // 이동 대상 게시판: DIARY(구조가 달라 이동 불가)와 자기 자신을 제외한
-    // 전부 — 커스텀 게시판이 새로 생겨도 자동으로 목록에 포함된다.
+    // 이동 대상 게시판: DIARY(구조가 달라 이동 불가)와 자기 자신을 제외한, 지금
+    // 실제로 탭에 보이는(글이 1개 이상 있는) 게시판만 — 글이 0개라 탭에서
+    // 숨겨진 게시판으로 "이동"해버리면 이동한 글을 다시 찾기 어려워지므로 제외한다.
     function getMoveTargets(exclude) {
-        return getBoardTypes().filter(t => t !== 'DIARY' && t !== exclude);
+        return getVisibleBoards().filter(t => t !== 'DIARY' && t !== exclude);
     }
 
     function movePostFromEl(el) {
@@ -2271,8 +2442,16 @@ function renderTagCloud(type) {
 
         document.body.appendChild(popup);
 
-        const rect = anchorEl.getBoundingClientRect();
-        popup.style.top  = (window.scrollY + rect.bottom + 4) + 'px';
+        const rect        = anchorEl.getBoundingClientRect();
+        const popupHeight = popup.offsetHeight;
+        const spaceBelow  = window.innerHeight - rect.bottom;
+
+        // 아래쪽에 공간이 부족하면(예: 화면 맨 밑에 고정된 MOVE 바) 위로 뒤집는다
+        const top = (spaceBelow < popupHeight + 12)
+            ? window.scrollY + rect.top - popupHeight - 4
+            : window.scrollY + rect.bottom + 4;
+
+        popup.style.top  = Math.max(8, top) + 'px';
         popup.style.left = Math.max(8, window.scrollX + rect.right - popup.offsetWidth) + 'px';
 
         setTimeout(() => {
@@ -2997,7 +3176,7 @@ function renderTagCloud(type) {
             } else {
                 if (pending.length === 0) return;
                 const chance = Math.min(100, Math.max(0, Number(P.aiChance) || 0)) / 100;
-                if (pending.length < 3 && Math.random() >= chance) return;   // 이번엔 조용히 — 글은 계속 쌓인다
+                if (pending.length < 5 && Math.random() >= chance) return;   // 이번엔 조용히 — 글은 계속 쌓인다
             }
 
             if (aiUsageToday() >= AI_DAILY_LIMIT) {
@@ -3150,6 +3329,299 @@ function renderTagCloud(type) {
 
     // 다른 스크립트/인라인 핸들러에서 쓰는 함수들 노출
     window.escapeHtml = escapeHtml;
+
+    // ═══════════════════════════════════════════════════════════════
+    // ── YouTube 랜덤 재생 + 플레이리스트 ──
+    //   · 곡 목록은 "_settings/playlist" 문서 1개(items 배열)에 저장한다.
+    //     (곡마다 문서를 만들면 접속할 때마다 곡 수만큼 읽기가 생기기 때문)
+    //   · ▶ 는 목록을 섞어서(셔플) 끝까지 재생하고, 다 돌면 다시 섞는다.
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+        const btnToggle = $id('ytToggleBtn');
+        const btnOpen   = $id('openPlaylistBtn');
+        const overlay   = $id('playlistOverlay');
+        const btnClose  = $id('playlistClose');
+        const urlInput  = $id('youtubeUrlInput');
+        const addBtn    = $id('playlistAddBtn');
+        const hintEl    = $id('playlistHint');
+        const listEl    = $id('playlistList');
+        const emptyEl   = $id('playlistEmpty');
+
+        const VIDEO_RE = /^[A-Za-z0-9_-]{11}$/;
+        const playlistCache = new Map();          // videoId → { videoId, title, addedAt }
+        let ytPlayer = null;
+        let ytApiScriptAdded = false;
+        let ytApiCallbacks = [];
+        let playQueue = [];
+        let queueIndex = -1;
+        let currentVideoId = null;
+        let errorStreak = 0;
+
+        // ---------------- YouTube IFrame API ----------------
+        function ensureYtApi(callback) {
+            if (window.YT && window.YT.Player) { callback(); return; }
+            ytApiCallbacks.push(callback);
+            if (ytApiScriptAdded) return;
+            ytApiScriptAdded = true;
+            window.onYouTubeIframeAPIReady = function () {
+                const cbs = ytApiCallbacks;
+                ytApiCallbacks = [];
+                cbs.forEach(fn => fn());
+            };
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            document.head.appendChild(tag);
+        }
+
+        // ---------------- 링크 파싱 / 제목 ----------------
+        function extractYoutubeId(input) {
+            let raw = (input || '').trim();
+            if (!raw) return null;
+            if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+            try {
+                const u = new URL(raw);
+                const host = u.hostname.replace(/^(www|m|music)\./, '');
+                let id = null;
+                if (host === 'youtu.be') {
+                    id = u.pathname.slice(1).split('/')[0];
+                } else if (host === 'youtube.com') {
+                    if (u.pathname === '/watch') id = u.searchParams.get('v');
+                    else {
+                        const m = u.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/);
+                        if (m) id = m[1];
+                    }
+                }
+                return id && VIDEO_RE.test(id) ? id : null;
+            } catch (_) { return null; }
+        }
+
+        async function fetchYoutubeTitle(url) {
+            try {
+                const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+                if (!res.ok) throw new Error('oEmbed 요청 실패');
+                const data = await res.json();
+                return data.title || '';
+            } catch (err) {
+                console.warn('유튜브 제목 조회 실패:', err);
+                return '';
+            }
+        }
+
+        // ---------------- 랜덤 재생 큐 ----------------
+        function shuffleArray(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+        function buildQueue() { return shuffleArray(Array.from(playlistCache.keys())); }
+
+        function setPlayingUi(playing) {
+            btnToggle.textContent = playing ? '❚❚' : '▶';
+            btnToggle.classList.toggle('active', playing);
+            btnToggle.title = playing ? '일시정지' : '랜덤 재생';
+        }
+
+        function startPlayback() {
+            if (playlistCache.size === 0) {
+                showToast('재생목록이 비어 있어요. ♪ 버튼으로 곡을 추가해주세요');
+                return;
+            }
+            ensureYtApi(() => {
+                if (!ytPlayer) {
+                    playQueue = buildQueue();
+                    queueIndex = 0;
+                    currentVideoId = playQueue[0];
+                    ytPlayer = new YT.Player('ytPlayer', {
+                        videoId: currentVideoId,
+                        playerVars: { autoplay: 1, controls: 0, playsinline: 1 },
+                        events: {
+                            onReady: e => e.target.playVideo(),
+                            onStateChange: onPlayerStateChange,
+                            onError: onPlayerError
+                        }
+                    });
+                    renderPlaylist();
+                } else {
+                    ytPlayer.playVideo();
+                }
+            });
+        }
+
+        function togglePlayback() {
+            if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+                if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    ytPlayer.pauseVideo();
+                    return;
+                }
+            }
+            startPlayback();
+        }
+
+        function onPlayerStateChange(e) {
+            if (e.data === YT.PlayerState.PLAYING) { errorStreak = 0; setPlayingUi(true); }
+            else if (e.data === YT.PlayerState.PAUSED) setPlayingUi(false);
+            else if (e.data === YT.PlayerState.ENDED) playNext();
+        }
+
+        // 퍼가기가 막혔거나 지워진 영상은 건너뛴다 (전부 실패하면 멈춘다)
+        function onPlayerError() {
+            errorStreak++;
+            if (errorStreak >= Math.max(playlistCache.size, 1)) {
+                errorStreak = 0;
+                setPlayingUi(false);
+                showToast('재생할 수 있는 곡이 없어요');
+                return;
+            }
+            showToast('재생할 수 없는 곡이라 건너뛰어요');
+            playNext();
+        }
+
+        function playNext() {
+            if (playlistCache.size === 0) {
+                setPlayingUi(false);
+                currentVideoId = null;
+                renderPlaylist();
+                return;
+            }
+            queueIndex++;
+            if (queueIndex >= playQueue.length || !playlistCache.has(playQueue[queueIndex])) {
+                playQueue = buildQueue();        // 한 바퀴 다 돌았거나 지워진 곡 → 다시 섞기
+                queueIndex = 0;
+            }
+            currentVideoId = playQueue[queueIndex];
+            ytPlayer.loadVideoById(currentVideoId);
+            renderPlaylist();
+        }
+
+        btnToggle.addEventListener('click', togglePlayback);
+
+        // ---------------- 목록 저장/표시 ----------------
+        function sortedItems() {
+            return Array.from(playlistCache.values()).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+        }
+
+        function persistPlaylist() {
+            if (window.saveSettingsDoc) window.saveSettingsDoc('playlist', { items: sortedItems() });
+        }
+
+        // module의 onSnapshot이 호출한다 (내가 저장한 것도, 다른 기기에서 바뀐 것도 여기로 온다)
+        window.onPlaylistData = function (data) {
+            const items = Array.isArray(data && data.items) ? data.items : [];
+            playlistCache.clear();
+            items.forEach(it => {
+                if (!it || typeof it.videoId !== 'string' || !VIDEO_RE.test(it.videoId)) return;
+                playlistCache.set(it.videoId, {
+                    videoId: it.videoId,
+                    title: String(it.title || '').slice(0, 200),
+                    addedAt: typeof it.addedAt === 'number' ? it.addedAt : 0
+                });
+            });
+            renderPlaylist();
+            // 곡이 있으면 API를 미리 받아둔다: 모바일은 "탭한 순간"에 플레이어를 만들어야 자동재생이 허용된다
+            if (playlistCache.size) ensureYtApi(() => {});
+        };
+
+        function renderPlaylist() {
+            listEl.querySelectorAll('.playlist-item').forEach(el => el.remove());
+            emptyEl.style.display = playlistCache.size ? 'none' : 'block';
+            sortedItems().forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'playlist-item' + (item.videoId === currentVideoId ? ' playing' : '');
+
+                const span = document.createElement('span');
+                span.className = 'playlist-title';
+                span.textContent = (item.videoId === currentVideoId ? '♪ ' : '') + (item.title || item.videoId);
+                span.title = item.title || item.videoId;
+
+                const del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'playlist-del';
+                del.textContent = '✕';
+                del.setAttribute('aria-label', '삭제');
+                del.addEventListener('click', () => deleteSong(item.videoId));
+
+                li.appendChild(span);
+                li.appendChild(del);
+                listEl.appendChild(li);
+            });
+        }
+
+        function setHint(msg) { hintEl.textContent = msg || ''; }
+
+        async function addSong() {
+            const videoId = extractYoutubeId(urlInput.value);
+            if (!videoId) { setHint('유효한 유튜브 링크가 아니에요.'); return; }
+            if (playlistCache.has(videoId)) { setHint('이미 추가된 곡이에요.'); return; }
+
+            addBtn.disabled = true;
+            setHint('추가 중...');
+            try {
+                const url   = `https://www.youtube.com/watch?v=${videoId}`;
+                const title = await fetchYoutubeTitle(url);
+                playlistCache.set(videoId, { videoId, title: (title || url).slice(0, 200), addedAt: Date.now() });
+                renderPlaylist();          // 저장 응답을 기다리지 않고 바로 보여준다 (오프라인이어도 OK)
+                persistPlaylist();
+                urlInput.value = '';
+                setHint('');
+            } catch (err) {
+                console.error(err);
+                setHint('추가 중 오류가 발생했어요.');
+            } finally {
+                addBtn.disabled = false;
+            }
+        }
+
+        function deleteSong(videoId) {
+            const item = playlistCache.get(videoId);
+            if (!item) return;
+            if (!window.confirm(`"${item.title || '이 곡'}"을(를) 삭제하시겠습니까?`)) return;
+
+            playlistCache.delete(videoId);
+
+            // 재생 큐에서도 빼고, 인덱스를 맞춘다
+            const idx = playQueue.indexOf(videoId);
+            const wasCurrent = (videoId === currentVideoId);
+            if (idx !== -1) {
+                playQueue.splice(idx, 1);
+                if (idx <= queueIndex) queueIndex--;
+            }
+
+            renderPlaylist();
+            persistPlaylist();
+
+            if (wasCurrent && ytPlayer) {
+                if (playlistCache.size === 0) {
+                    if (typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
+                    currentVideoId = null;
+                    setPlayingUi(false);
+                    renderPlaylist();
+                } else {
+                    playNext();
+                }
+            }
+        }
+
+        // ---------------- 다이얼로그 ----------------
+        function openPlaylist() {
+            urlInput.value = '';
+            setHint('');
+            renderPlaylist();
+            overlay.classList.add('open');
+        }
+        function closePlaylist() { overlay.classList.remove('open'); }
+
+        btnOpen.addEventListener('click', openPlaylist);
+        btnClose.addEventListener('click', closePlaylist);
+        overlay.addEventListener('click', e => { if (e.target === overlay) closePlaylist(); });
+        addBtn.addEventListener('click', addSong);
+        urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSong(); } });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && overlay.classList.contains('open')) closePlaylist();
+        });
+    })();
 
     // ── Boot: 예전 게시판들을 등록하고(탭은 글이 있을 때만 보임) 첫 탭을 고른다 ──
     LEGACY_BOARDS.forEach(t => addBoardUI(t));
