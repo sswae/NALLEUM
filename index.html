@@ -1188,6 +1188,10 @@
             </div>
             <input type="file" id="set-ai-file" accept="image/*" style="display:none" onchange="onAvatarPicked('ai', this)">
             <div class="settings-hint">사진은 96×96으로 줄여서 저장돼요 (몇 KB). 올리거나 지우면 바로 저장됩니다.</div>
+            <div class="profile-edit-btns" style="margin-top:8px;">
+                <button class="btn-pixel btn-small" style="background:#8a4a4a; color:#f0e6e6;" onclick="deleteAllAiPosts()">🗑 트친이 쓴 글 전체 삭제</button>
+            </div>
+            <div class="settings-hint">이름·핸들이 아니라, 글을 쓸 때 붙는 내부 표시(author: ai)로 트친 글만 정확히 골라내요. 이름을 바꿔도 예전 글까지 전부 잡혀요.</div>
         </div>
 
         <div class="settings-card">
@@ -3055,6 +3059,36 @@ function renderTagCloud(type) {
         maybeTriggerAI({ force: true });
     }
 
+    // ── 트친(AI) 글 전체 삭제 ──
+    // 이름/핸들 문자열을 뒤쫓지 않는다 — 이름은 나중에 얼마든지 바뀔 수 있어서
+    // 검색 기준으로 쓰면 예전에 다른 이름으로 쓴 글을 놓칠 수 있다. 대신 글을
+    // 만들 때부터 붙는 author:'ai' 표시(이 설정 화면 밖 코드에서 트친이 글을
+    // 쓸 때마다 자동으로 붙는 값)를 기준으로 찾기 때문에, 이름을 몇 번 바꿔도
+    // 트친이 쓴 글은 전부 정확히 잡힌다.
+    function collectAiPosts() {
+        const out = [];
+        window.boardOrder.forEach(t => {
+            (window.boardData[t] || []).forEach(p => {
+                if (p.author === 'ai') out.push({ type: t, id: p.id, images: p.images || [] });
+            });
+        });
+        return out;
+    }
+
+    function deleteAllAiPosts() {
+        const targets = collectAiPosts();
+        if (!targets.length) { showToast('삭제할 트친 글이 없어요'); return; }
+
+        const P = window.profile;
+        const msg = `트친(${P.aiName} ${P.aiHandle})이 쓴 글 ${targets.length}개를 전부 삭제할까요?\n`
+            + `첨부 이미지도 함께 지워지고, 되돌릴 수 없어요.`;
+        if (!confirm(msg)) return;
+
+        targets.forEach(t => window.queueDelete(t.type, t.id, t.images));
+        showToast(`트친 글 ${targets.length}개를 삭제했어요`);
+    }
+    window.deleteAllAiPosts = deleteAllAiPosts;
+
     // ── AI 상태 (_settings/ai_state): 마지막 반응 시각 + 오늘 호출 횟수 ──
     window.aiState   = null;     // null = 아직 못 읽음
     window.aiRuntime = { busy: false, cooldownUntil: 0, lastMsg: '' };
@@ -3176,7 +3210,7 @@ function renderTagCloud(type) {
             } else {
                 if (pending.length === 0) return;
                 const chance = Math.min(100, Math.max(0, Number(P.aiChance) || 0)) / 100;
-                if (pending.length < 5 && Math.random() >= chance) return;   // 이번엔 조용히 — 글은 계속 쌓인다
+                if (pending.length < 3 && Math.random() >= chance) return;   // 이번엔 조용히 — 글은 계속 쌓인다
             }
 
             if (aiUsageToday() >= AI_DAILY_LIMIT) {
@@ -3206,7 +3240,7 @@ function renderTagCloud(type) {
             const systemText =
                 `${P.aiPrompt}\n\n` +
                 `[출력 규칙 — 반드시 지킬 것]\n` +
-                `- 트윗 한 개 분량(1~2문장, 120자 이내)으로 쓴다. 길어지거나 설명조가 되면 안 된다.\n` +
+                `- 트윗 한 개 분량(240자 이내)으로 쓴다. 길어지거나 설명조가 되면 안 된다.\n` +
                 `- 내가 올린 글의 구체적인 내용을 짚어서 반응한다. 뭉뚱그린 인사말은 금지.\n` +
                 `- 게시판마다 트윗을 정확히 1개씩만 쓴다. board 값은 주어진 게시판 이름을 그대로 쓴다.\n` +
                 `- 반드시 {"tweets":[{"board":"...","text":"..."}]} 형태의 JSON으로만 답한다.`;
