@@ -1293,6 +1293,27 @@
         </div>
 
         <div class="settings-card">
+            <div class="settings-label">API & MODEL</div>
+            <div class="profile-edit-fields">
+                <input id="set-gemini-model" class="settings-input" list="gemini-model-list" placeholder="모델 이름 (예: gemini-3.5-flash-lite)" autocomplete="off" spellcheck="false">
+                <datalist id="gemini-model-list">
+                    <option value="gemini-3.5-flash-lite"></option>
+                    <option value="gemini-3.5-flash"></option>
+                    <option value="gemini-3.6-flash"></option>
+                </datalist>
+                <input id="set-gemini-key" class="settings-input" type="password" placeholder="Gemini API 키" autocomplete="off" spellcheck="false">
+                <input id="set-tmdb-token" class="settings-input" type="password" placeholder="TMDB Read Access Token (영화 포스터 검색용)" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="settings-hint" id="secret-status"></div>
+            <div class="settings-hint">
+                API 키는 코드나 서버(Firestore)에 저장되지 않고, <b>이 기기의 브라우저에만</b> 저장돼요. 다른 기기에서는 한 번씩 입력해야 해요.
+                칸을 비워두고 SAVE하면 저장된 키는 그대로 유지돼요.
+                <span style="text-decoration:underline; cursor:pointer;" onclick="clearSecret('gemini')">Gemini 키 삭제</span> ·
+                <span style="text-decoration:underline; cursor:pointer;" onclick="clearSecret('tmdb')">TMDB 토큰 삭제</span>
+            </div>
+        </div>
+
+        <div class="settings-card">
             <div class="settings-label">ME</div>
             <div class="profile-edit-row">
                 <div id="set-me-avatar" class="avatar avatar-lg avatar-me"></div>
@@ -1420,25 +1441,35 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     ★ TWT(AI 트친) 설정 — 여기만 고치면 됩니다
+     ★ API 키 / 모델 설정 — 이제 앱 안(🐣 TWT → API & MODEL)에서 입력합니다
+       · 키는 이 파일에 들어 있지 않고, 이 기기의 브라우저(localStorage)에만 저장돼요.
+       · 모델 이름은 설정 화면에서 바꾸면 바로 적용돼요.
      ═══════════════════════════════════════════════════════════════ -->
 <script>
-    // ① Gemini API 키를 따옴표 안에 붙여넣으세요.  발급: https://aistudio.google.com/apikey
-    //    (비워두면 트친 기능만 조용히 꺼지고, 나머지 앱은 그대로 동작합니다)
-    //    ※ 이 파일은 공개 배포되면 누구나 볼 수 있으니, 키는 Google Cloud 콘솔에서
-    //       "HTTP 리퍼러 제한(내 GitHub Pages 주소만 허용)"을 걸어두는 걸 권장해요.
-    const GEMINI_API_KEY = "AQ.Ab8RN6L1PSTD07_6LgkZKInsyX2uy0iDPMp5oTOVwPuOGexk0g";
+    const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 
-    // ② 사용할 모델 ID. 모델마다 무료 티어의 하루 호출 한도(RPD)가 다르니 AI Studio의 Rate limit 화면에서 확인하세요.
-    const GEMINI_MODEL   = "gemini-3.5-flash-lite";
-
-    // ③ 하루 최대 호출 수(앱 안에서 세는 안전장치). 무료 한도가 20이면 20 그대로 두면 돼요.
+    // 하루 최대 호출 수(앱 안에서 세는 안전장치). 무료 한도가 20이면 20으로 바꾸세요.
     const AI_DAILY_LIMIT = 100;
 
-    // ─── RECORD(책/영화 기록) 포스터·표지 검색 설정 ───
-    // TMDB(영화) API Read Access Token. 발급: https://www.themoviedb.org/settings/api
-    //   (책 검색은 Google Books API를 쓰는데, 이건 키 없이도 동작해서 별도 설정이 없어요)
-    const TMDB_READ_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiNzI5NDI4OWJkMGZhY2E2NWE5OGEyN2VkOTQ1ZmJhMyIsIm5iZiI6MTc5MzUyMjE3Ni4wNDcwMDAyLCJzdWIiOiI2YWU2ZmEwMDFlOWJlMWJjNmRiODU1ZmQiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.bhCiqXYZEngi-cVioN8V2s7FgiLLrMXJgAXltW77odM";
+    // ── 비밀 값(API 키)은 이 기기의 localStorage에만 저장한다 (Firestore/코드에는 절대 넣지 않음) ──
+    const SECRET_KEYS = { gemini: 'nalleum_gemini_key', tmdb: 'nalleum_tmdb_token' };
+    function getSecret(name) {
+        try { return (localStorage.getItem(SECRET_KEYS[name]) || '').trim(); } catch (e) { return ''; }
+    }
+    function setSecret(name, value) {
+        try {
+            value = (value || '').trim();
+            if (value) localStorage.setItem(SECRET_KEYS[name], value);
+            else localStorage.removeItem(SECRET_KEYS[name]);
+            return true;
+        } catch (e) { return false; }
+    }
+    function getGeminiKey()  { return getSecret('gemini'); }
+    function getTmdbToken()  { return getSecret('tmdb'); }
+    function getGeminiModel() {
+        const m = window.profile && typeof window.profile.aiModel === 'string' ? window.profile.aiModel.trim() : '';
+        return m || DEFAULT_GEMINI_MODEL;
+    }
 </script>
 
 <!-- Firebase Module -->
@@ -2577,7 +2608,9 @@ function renderTagCloud(type) {
 
     async function searchTMDB(q) {
         const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(q)}&language=ko-KR&include_adult=false`;
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${TMDB_READ_TOKEN}`, accept: 'application/json' } });
+        const token = getTmdbToken();
+        if (!token) throw new Error('NO_TMDB_TOKEN');
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, accept: 'application/json' } });
         if (!res.ok) throw new Error('TMDB ' + res.status);
         const data = await res.json();
         return (data.results || [])
@@ -2621,7 +2654,9 @@ function renderTagCloud(type) {
             `).join('');
         } catch (e) {
             console.error(e);
-            hintEl.innerText = '검색 실패. 네트워크를 확인해주세요.';
+            hintEl.innerText = (e && e.message === 'NO_TMDB_TOKEN')
+                ? '영화 검색에는 TMDB 토큰이 필요해요. 🐣 TWT → API & MODEL에서 입력해주세요.'
+                : '검색 실패. 네트워크를 확인해주세요.';
         }
     }
     window.runPosterSearch = runPosterSearch;
@@ -3324,10 +3359,11 @@ function renderTagCloud(type) {
         meName: 'ME',   meHandle: '@me',   meAvatar: '',
         aiName: '트친', aiHandle: '@twt',  aiAvatar: '',
         aiPrompt: DEFAULT_AI_PROMPT,
+        aiModel: DEFAULT_GEMINI_MODEL,   // 모델 이름은 비밀이 아니라서 프로필에 저장(기기끼리 동기화)
         aiChance: 40,        // 새 글이 1~2개 쌓였을 때 반응할 확률(%). 3개 이상이면 무조건 반응.
         aiEnabled: true
     };
-    const TEXT_KEYS = ['meName', 'meHandle', 'aiName', 'aiHandle', 'aiPrompt'];
+    const TEXT_KEYS = ['meName', 'meHandle', 'aiName', 'aiHandle', 'aiPrompt', 'aiModel'];
     const IMG_RE = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 
     let rawProfile = {};                       // Firestore 문서 그대로
@@ -3449,6 +3485,10 @@ function renderTagCloud(type) {
         $id('set-ai-prompt').value   = p.aiPrompt;
         $id('set-ai-chance').value   = p.aiChance;
         $id('set-ai-enabled').checked = !!p.aiEnabled;
+        $id('set-gemini-model').value = p.aiModel;
+        $id('set-gemini-key').value   = '';     // 저장된 키는 화면에 다시 보여주지 않는다
+        $id('set-tmdb-token').value   = '';
+        renderSecretStatus();
         syncSettingsAvatars();
         renderAiStatus();
     }
@@ -3459,11 +3499,36 @@ function renderTagCloud(type) {
         return v.startsWith('@') ? v : '@' + v;
     }
 
+    function renderSecretStatus() {
+        const el = $id('secret-status');
+        if (!el) return;
+        el.innerHTML =
+            `Gemini 키: ${getGeminiKey() ? '✅ 저장됨 (이 기기)' : '❌ 없음'} · ` +
+            `TMDB 토큰: ${getTmdbToken() ? '✅ 저장됨 (이 기기)' : '❌ 없음'}`;
+    }
+
+    function clearSecret(name) {
+        const label = name === 'gemini' ? 'Gemini API 키' : 'TMDB 토큰';
+        if (!getSecret(name)) { showToast(`저장된 ${label}가 없어요`); return; }
+        if (!confirm(`이 기기에 저장된 ${label}를 삭제할까요?`)) return;
+        setSecret(name, '');
+        renderSecretStatus();
+        renderAiStatus();
+        showToast(`${label}를 삭제했어요`);
+    }
+
     function saveSettings() {
+        // API 키: 새로 입력한 칸만 이 기기에 저장 (빈 칸 = 기존 값 유지)
+        const newGemini = $id('set-gemini-key').value.trim();
+        const newTmdb   = $id('set-tmdb-token').value.trim();
+        if (newGemini && !setSecret('gemini', newGemini)) alert('이 브라우저에서는 키를 저장할 수 없어요 (사생활 보호 모드 등).');
+        if (newTmdb   && !setSecret('tmdb',   newTmdb))   alert('이 브라우저에서는 토큰을 저장할 수 없어요 (사생활 보호 모드 등).');
+
         let chance = parseInt($id('set-ai-chance').value, 10);
         if (isNaN(chance)) chance = DEFAULT_PROFILE.aiChance;
         chance = Math.min(100, Math.max(0, chance));
         saveProfileDoc({
+            aiModel:   $id('set-gemini-model').value.trim().replace(/^models\//, ''),
             meName:    $id('set-me-name').value.trim(),
             meHandle:  normHandle($id('set-me-handle').value),
             aiName:    $id('set-ai-name').value.trim(),
@@ -3567,8 +3632,8 @@ function renderTagCloud(type) {
         if (!el) return;
         const p = window.profile;
         const lines = [
-            `API KEY: ${GEMINI_API_KEY ? '✅ SET' : '❌ NOT SET — index.html 위쪽의 GEMINI_API_KEY에 키를 넣어주세요'}`,
-            `MODEL: ${escapeHtml(GEMINI_MODEL)}`,
+            `API KEY: ${getGeminiKey() ? '✅ SET (이 기기)' : '❌ NOT SET — 아래 API & MODEL에서 입력해주세요'}`,
+            `MODEL: ${escapeHtml(getGeminiModel())}`,
             `TODAY: ${aiUsageToday()} / ${AI_DAILY_LIMIT}`,
             `TWT: ${p.aiEnabled ? 'ON' : 'OFF'} · CHANCE ${p.aiChance}%`
         ];
@@ -3619,9 +3684,9 @@ function renderTagCloud(type) {
 
         if (rt.busy) { if (force) showToast('트친이 지금 글을 쓰는 중이에요'); return; }
         if (!force && !P.aiEnabled) return;
-        if (!GEMINI_API_KEY) {
+        if (!getGeminiKey()) {
             setAiStatus('API 키가 비어 있어요');
-            if (force) showToast('GEMINI_API_KEY가 비어 있어요 (index.html 위쪽)');
+            if (force) showToast('Gemini API 키를 먼저 입력해주세요 (🐣 TWT → API & MODEL)');
             return;
         }
         if (Date.now() < rt.cooldownUntil) {
@@ -3727,10 +3792,10 @@ function renderTagCloud(type) {
     window.maybeTriggerAI = maybeTriggerAI;
 
     async function requestTweets(systemText, userText, boards) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(getGeminiModel())}:generateContent`;
         const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getGeminiKey() },
             body: JSON.stringify({
                 systemInstruction: { parts: [{ text: systemText }] },
                 contents: [{ role: 'user', parts: [{ text: userText }] }],
